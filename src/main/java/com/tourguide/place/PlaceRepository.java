@@ -33,4 +33,16 @@ public interface PlaceRepository extends JpaRepository<Place, UUID> {
     Optional<Place> findByIdAndIsActiveTrue(UUID id);
 
     Optional<Place> findByExternalId(String externalId);
+
+    // ── Dashboard aggregate queries ──
+
+    long countByIsActiveTrue();
+
+    List<Place> findByIsActiveTrue();
+
+    @Query("SELECT COALESCE(AVG(p.avgRating), 0) FROM Place p WHERE p.isActive = true")
+    double avgRatingOfActive();
+
+    @Query("SELECT COALESCE(SUM(p.reviewCount), 0) FROM Place p WHERE p.isActive = true")
+    long sumReviewCountOfActive();
 }

@@ -1,6 +1,8 @@
 package com.tourguide.review;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,4 +16,9 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     List<Review> findByStatusAndIsActiveTrue(ReviewStatus status);
 
     boolean existsByUserIdAndPlaceId(UUID userId, UUID placeId);
+
+    // ── Dashboard queries ──
+
+    @Query("SELECT r FROM Review r WHERE r.isActive = true ORDER BY r.createdAt DESC")
+    List<Review> findRecentReviews(Pageable pageable);
 }

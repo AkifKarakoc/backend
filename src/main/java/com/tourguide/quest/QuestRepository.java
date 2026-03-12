@@ -13,4 +13,8 @@ public interface QuestRepository extends JpaRepository<Quest, UUID> {
     List<Quest> findByIsActiveTrue();
 
     Optional<Quest> findByIdAndIsActiveTrue(UUID id);
+
+    // ── Dashboard aggregate queries ──
+
+    long countByIsActiveTrue();
 }

@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/superadmin/**").hasRole("SUPERADMIN")
                         .requestMatchers("/admin/editor/**").hasAnyRole("SUPERADMIN", "CONTENT_EDITOR")
                         .requestMatchers("/admin/moderator/**").hasAnyRole("SUPERADMIN", "MODERATOR")
+                        .requestMatchers("/admin/dashboard/**").hasAnyRole("SUPERADMIN", "CONTENT_EDITOR", "MODERATOR")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)

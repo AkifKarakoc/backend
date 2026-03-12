@@ -17,5 +17,6 @@
     <include file="db/changelog/changes/010-create-chat-tables.xml"/>
     <include file="db/changelog/changes/011-create-notification-tables.xml"/>
     <include file="db/changelog/changes/012-add-indexes.xml"/>
+    <include file="db/changelog/changes/013-add-dashboard-indexes.xml"/>
 
 </databaseChangeLog>

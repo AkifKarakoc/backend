@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="013-add-dashboard-indexes" author="tourguide">
+        <comment>Add indexes for dashboard analytics queries</comment>
+
+        <!-- user_quests: completed_at for daily completion trend queries -->
+        <createIndex indexName="idx_user_quests_completed_at" tableName="user_quests">
+            <column name="completed_at"/>
+        </createIndex>
+
+        <!-- user_quests: started_at for active users trend queries -->
+        <createIndex indexName="idx_user_quests_started_at" tableName="user_quests">
+            <column name="started_at"/>
+        </createIndex>
+
+        <!-- user_quests: status for completion/abandoned grouping queries -->
+        <createIndex indexName="idx_user_quests_status" tableName="user_quests">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- users: created_at for new user count queries -->
+        <createIndex indexName="idx_users_created_at" tableName="users">
+            <column name="created_at"/>
+        </createIndex>
+
+        <!-- user_badges: earned_at for recent badge earnings -->
+        <createIndex indexName="idx_user_badges_earned_at" tableName="user_badges">
+            <column name="earned_at"/>
+        </createIndex>
+
+        <!-- reviews: created_at for recent reviews activity feed -->
+        <createIndex indexName="idx_reviews_created_at" tableName="reviews">
+            <column name="created_at"/>
+        </createIndex>
+
+        <!-- users: exp_points for top users ranking -->
+        <createIndex indexName="idx_users_exp_points" tableName="users">
+            <column name="exp_points" descending="true"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
