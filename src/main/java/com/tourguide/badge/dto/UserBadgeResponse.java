@@ -15,6 +15,7 @@ public class UserBadgeResponse {
     private UUID badgeId;
     private String badgeName;
     private String badgeDescription;
-    private String badgeIconUrl;
+    private String badgeIconName;
+    private String badgeIconColor;
     private LocalDateTime earnedAt;
 }

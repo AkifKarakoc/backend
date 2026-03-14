@@ -14,9 +14,9 @@ public interface IBadgeService {
 
     void awardBadge(UUID userId, UUID badgeId);
 
-    Badge createBadge(String name, String description, String iconUrl);
+    Badge createBadge(String name, String description, String iconName, String iconColor);
 
-    Badge updateBadge(UUID badgeId, String name, String description, String iconUrl);
+    Badge updateBadge(UUID badgeId, String name, String description, String iconName, String iconColor);
 
     void softDeleteBadge(UUID badgeId);
 }

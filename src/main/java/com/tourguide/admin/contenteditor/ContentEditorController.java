@@ -135,7 +135,8 @@ public class ContentEditorController {
                 .id(badge.getId())
                 .name(badge.getName())
                 .description(badge.getDescription())
-                .iconUrl(badge.getIconUrl())
+                .iconName(badge.getIconName())
+                .iconColor(badge.getIconColor())
                 .build();
     }
 }

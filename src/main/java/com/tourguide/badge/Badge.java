@@ -19,6 +19,9 @@ public class Badge extends BaseEntity {
     @Column(columnDefinition = "text")
     private String description;
 
-    @Column(name = "icon_url", length = 500)
-    private String iconUrl;
+    @Column(name = "icon_name", length = 100)
+    private String iconName;
+
+    @Column(name = "icon_color", length = 7)
+    private String iconColor;
 }
