@@ -148,12 +148,23 @@ public class ContentEditorService {
     // --- Badges ---
     @Transactional
     public Badge createBadge(CreateBadgeRequest request) {
-        return badgeService.createBadge(request.getName(), request.getDescription(), request.getIconUrl());
+        return badgeService.createBadge(
+                request.getName(),
+                request.getDescription(),
+                request.getIconName(),
+                request.getIconColor()
+        );
     }
 
     @Transactional
     public Badge updateBadge(UUID badgeId, CreateBadgeRequest request) {
-        return badgeService.updateBadge(badgeId, request.getName(), request.getDescription(), request.getIconUrl());
+        return badgeService.updateBadge(
+                badgeId,
+                request.getName(),
+                request.getDescription(),
+                request.getIconName(),
+                request.getIconColor()
+        );
     }
 
     @Transactional

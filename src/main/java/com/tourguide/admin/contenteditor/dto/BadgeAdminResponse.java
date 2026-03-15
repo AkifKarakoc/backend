@@ -13,5 +13,6 @@ public class BadgeAdminResponse {
     private UUID id;
     private String name;
     private String description;
-    private String iconUrl;
+    private String iconName;
+    private String iconColor;
 }

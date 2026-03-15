@@ -27,7 +27,8 @@ public class BadgeService implements IBadgeService {
                 .id(badge.getId())
                 .name(badge.getName())
                 .description(badge.getDescription())
-                .iconUrl(badge.getIconUrl())
+                .iconName(badge.getIconName())
+                .iconColor(badge.getIconColor())
                 .earnedByUser(userId != null && userBadgeRepository.existsByUserIdAndBadgeId(userId, badge.getId()))
                 .build())
                 .collect(Collectors.toList());
@@ -46,7 +47,8 @@ public class BadgeService implements IBadgeService {
                             .badgeId(ub.getBadgeId())
                             .badgeName(badge.getName())
                             .badgeDescription(badge.getDescription())
-                            .badgeIconUrl(badge.getIconUrl())
+                            .badgeIconName(badge.getIconName())
+                            .badgeIconColor(badge.getIconColor())
                             .earnedAt(ub.getEarnedAt())
                             .build();
                 })
@@ -74,17 +76,18 @@ public class BadgeService implements IBadgeService {
     }
 
     @Transactional
-    public Badge createBadge(String name, String description, String iconUrl) {
+    public Badge createBadge(String name, String description, String iconName, String iconColor) {
         Badge badge = Badge.builder()
                 .name(name)
                 .description(description)
-                .iconUrl(iconUrl)
+                .iconName(iconName)
+                .iconColor(iconColor)
                 .build();
         return badgeRepository.save(badge);
     }
 
     @Transactional
-    public Badge updateBadge(UUID badgeId, String name, String description, String iconUrl) {
+    public Badge updateBadge(UUID badgeId, String name, String description, String iconName, String iconColor) {
         Badge badge = badgeRepository.findByIdAndIsActiveTrue(badgeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Badge", "id", badgeId));
 
@@ -94,8 +97,11 @@ public class BadgeService implements IBadgeService {
         if (description != null) {
             badge.setDescription(description);
         }
-        if (iconUrl != null) {
-            badge.setIconUrl(iconUrl);
+        if (iconName != null) {
+            badge.setIconName(iconName);
+        }
+        if (iconColor != null) {
+            badge.setIconColor(iconColor);
         }
 
         return badgeRepository.save(badge);
