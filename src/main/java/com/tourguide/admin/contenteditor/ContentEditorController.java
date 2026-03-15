@@ -5,6 +5,7 @@ import com.tourguide.badge.Badge;
 import com.tourguide.place.Place;
 import com.tourguide.quest.Quest;
 import com.tourguide.route.Route;
+import com.tourguide.route.dto.RouteResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/admin/editor")
@@ -56,6 +58,11 @@ public class ContentEditorController {
     public ResponseEntity<RouteAdminResponse> createRoute(@Valid @RequestBody CreateRouteRequest request) {
         Route route = contentEditorService.createRoute(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(toRouteResponse(route));
+    }
+
+    @GetMapping("/routes")
+    public ResponseEntity<List<RouteResponse>> getRoutes() {
+        return ResponseEntity.ok(contentEditorService.getRoutes());
     }
 
     @DeleteMapping("/routes/{id}")
