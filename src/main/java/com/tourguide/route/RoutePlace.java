@@ -6,7 +6,16 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "route_places")
+@Table(
+        name = "route_places",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_route_places_route_stop_order", columnNames = {"route_id", "stop_order"}),
+                @UniqueConstraint(name = "uk_route_places_route_place", columnNames = {"route_id", "place_id"})
+        },
+        indexes = {
+                @Index(name = "idx_route_places_route_stop_order", columnList = "route_id,stop_order")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor

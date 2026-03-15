@@ -15,6 +15,7 @@ import com.tourguide.quest.QuestStep;
 import com.tourguide.route.IRouteService;
 import com.tourguide.route.Route;
 import com.tourguide.route.RoutePlace;
+import com.tourguide.route.dto.RouteResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -143,6 +144,11 @@ public class ContentEditorService {
     @Transactional
     public void deleteRoute(UUID routeId) {
         routeService.softDeleteRoute(routeId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RouteResponse> getRoutes() {
+        return routeService.findAll(null, null);
     }
 
     // --- Badges ---
