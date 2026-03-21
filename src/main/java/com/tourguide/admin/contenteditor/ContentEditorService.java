@@ -158,7 +158,8 @@ public class ContentEditorService {
                 request.getName(),
                 request.getDescription(),
                 request.getIconName(),
-                request.getIconColor()
+                request.getIconColor(),
+                request.getTier()
         );
     }
 
@@ -169,7 +170,8 @@ public class ContentEditorService {
                 request.getName(),
                 request.getDescription(),
                 request.getIconName(),
-                request.getIconColor()
+                request.getIconColor(),
+                request.getTier()
         );
     }
 

@@ -2,6 +2,7 @@ package com.tourguide.common.config;
 
 import com.tourguide.badge.Badge;
 import com.tourguide.badge.BadgeRepository;
+import com.tourguide.badge.BadgeTier;
 import com.tourguide.badge.UserBadge;
 import com.tourguide.badge.UserBadgeRepository;
 import com.tourguide.common.enums.Role;
@@ -188,10 +189,10 @@ public class DataInitializer implements ApplicationRunner {
 
     private List<Badge> seedBadges() {
         List<Badge> badges = List.of(
-                Badge.builder().name("History Master").description("Complete all heritage quests").build(),
-                Badge.builder().name("Local Foodie").description("Finish food-focused quests").build(),
-                Badge.builder().name("Agora Explorer").description("Traverse the Agora route").build(),
-                Badge.builder().name("Coastal Voyager").description("Complete waterfront trail series").build()
+                Badge.builder().name("History Master").description("Complete all heritage quests").tier(BadgeTier.GOLD).build(),
+                Badge.builder().name("Local Foodie").description("Finish food-focused quests").tier(BadgeTier.SILVER).build(),
+                Badge.builder().name("Agora Explorer").description("Traverse the Agora route").tier(BadgeTier.BRONZE).build(),
+                Badge.builder().name("Coastal Voyager").description("Complete waterfront trail series").tier(BadgeTier.GOLD).build()
         );
 
         List<Badge> saved = badgeRepository.saveAll(badges);

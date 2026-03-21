@@ -24,4 +24,8 @@ public class Badge extends BaseEntity {
 
     @Column(name = "icon_color", length = 7)
     private String iconColor;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tier", length = 16)
+    private BadgeTier tier;
 }

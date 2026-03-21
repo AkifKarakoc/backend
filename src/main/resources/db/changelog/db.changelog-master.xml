@@ -20,5 +20,6 @@
     <include file="db/changelog/changes/013-add-dashboard-indexes.xml"/>
     <include file="db/changelog/changes/014-update-badge-icon-fields.xml"/>
     <include file="db/changelog/changes/015-add-route-place-constraints.xml"/>
+    <include file="db/changelog/changes/016-add-badge-tier.xml"/>
 
 </databaseChangeLog>

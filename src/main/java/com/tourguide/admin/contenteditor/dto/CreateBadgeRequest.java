@@ -1,5 +1,6 @@
 package com.tourguide.admin.contenteditor.dto;
 
+import com.tourguide.badge.BadgeTier;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -26,4 +27,6 @@ public class CreateBadgeRequest {
 
     @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "Icon color must be a valid hex color like #013125")
     private String iconColor;
+
+    private BadgeTier tier;
 }

@@ -144,6 +144,7 @@ public class ContentEditorController {
                 .description(badge.getDescription())
                 .iconName(badge.getIconName())
                 .iconColor(badge.getIconColor())
+                .tier(badge.getTier() != null ? badge.getTier().name() : null)
                 .build();
     }
 }
