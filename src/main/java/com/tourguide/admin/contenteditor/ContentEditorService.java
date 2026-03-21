@@ -4,6 +4,7 @@ import com.tourguide.admin.contenteditor.dto.CreateBadgeRequest;
 import com.tourguide.admin.contenteditor.dto.CreatePlaceRequest;
 import com.tourguide.admin.contenteditor.dto.CreateQuestRequest;
 import com.tourguide.admin.contenteditor.dto.CreateRouteRequest;
+import com.tourguide.admin.contenteditor.dto.UpdateQuestRequest;
 import com.tourguide.admin.contenteditor.dto.UpdatePlaceRequest;
 import com.tourguide.badge.Badge;
 import com.tourguide.badge.IBadgeService;
@@ -86,7 +87,7 @@ public class ContentEditorService {
                 .expReward(request.getExpReward() != null ? request.getExpReward() : 0)
                 .region(request.getRegion())
                 .thumbnailUrl(request.getThumbnailUrl())
-                .badgeId(request.getBadgeId())
+                .badgeId(request.resolveBadgeId())
                 .build();
 
         List<QuestStep> steps = new ArrayList<>();
@@ -104,6 +105,19 @@ public class ContentEditorService {
         }
 
         return questService.createQuest(quest, steps);
+    }
+
+    @Transactional
+    public Quest updateQuest(UUID questId, UpdateQuestRequest request) {
+        Quest updates = Quest.builder()
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .expReward(request.getExpReward())
+                .region(request.getRegion())
+                .thumbnailUrl(request.getThumbnailUrl())
+                .badgeId(request.resolveBadgeId())
+                .build();
+        return questService.updateQuest(questId, updates);
     }
 
     @Transactional

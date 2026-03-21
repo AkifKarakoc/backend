@@ -47,6 +47,14 @@ public class ContentEditorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toQuestResponse(quest));
     }
 
+    @PatchMapping("/quests/{id}")
+    public ResponseEntity<QuestAdminResponse> updateQuest(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateQuestRequest request) {
+        Quest quest = contentEditorService.updateQuest(id, request);
+        return ResponseEntity.ok(toQuestResponse(quest));
+    }
+
     @DeleteMapping("/quests/{id}")
     public ResponseEntity<Void> deleteQuest(@PathVariable UUID id) {
         contentEditorService.deleteQuest(id);

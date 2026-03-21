@@ -23,7 +23,14 @@ public class CreateQuestRequest {
     private String region;
     private String thumbnailUrl;
     private UUID badgeId;
+    private List<UUID> badgeIds;
     private List<QuestStepRequest> steps;
+
+    public UUID resolveBadgeId() {
+        if (badgeId != null) return badgeId;
+        if (badgeIds != null && !badgeIds.isEmpty()) return badgeIds.get(0);
+        return null;
+    }
 
     @Getter
     @Setter

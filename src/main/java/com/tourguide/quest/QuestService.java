@@ -254,6 +254,22 @@ public class QuestService implements IQuestService {
 
     @Override
     @Transactional
+    public Quest updateQuest(UUID questId, Quest updates) {
+        Quest quest = questRepository.findByIdAndIsActiveTrue(questId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quest", "id", questId));
+
+        if (updates.getTitle() != null) quest.setTitle(updates.getTitle());
+        if (updates.getDescription() != null) quest.setDescription(updates.getDescription());
+        if (updates.getExpReward() != null) quest.setExpReward(updates.getExpReward());
+        if (updates.getRegion() != null) quest.setRegion(updates.getRegion());
+        if (updates.getThumbnailUrl() != null) quest.setThumbnailUrl(updates.getThumbnailUrl());
+        if (updates.getBadgeId() != null) quest.setBadgeId(updates.getBadgeId());
+
+        return questRepository.save(quest);
+    }
+
+    @Override
+    @Transactional
     public void softDeleteQuest(UUID questId) {
         Quest quest = questRepository.findByIdAndIsActiveTrue(questId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quest", "id", questId));
