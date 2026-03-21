@@ -23,6 +23,7 @@ public interface IQuestService {
     List<QuestVerification> getPendingVerifications();
 
     Quest createQuest(Quest quest, List<QuestStep> steps);
+    Quest updateQuest(UUID questId, Quest updates);
 
     void softDeleteQuest(UUID questId);
 
