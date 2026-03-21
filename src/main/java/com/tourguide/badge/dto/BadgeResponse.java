@@ -15,5 +15,6 @@ public class BadgeResponse {
     private String description;
     private String iconName;
     private String iconColor;
+    private String tier;
     private Boolean earnedByUser;
 }

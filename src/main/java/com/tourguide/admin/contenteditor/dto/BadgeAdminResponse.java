@@ -15,4 +15,5 @@ public class BadgeAdminResponse {
     private String description;
     private String iconName;
     private String iconColor;
+    private String tier;
 }

@@ -29,6 +29,7 @@ public class BadgeService implements IBadgeService {
                 .description(badge.getDescription())
                 .iconName(badge.getIconName())
                 .iconColor(badge.getIconColor())
+                .tier(badge.getTier() != null ? badge.getTier().name() : null)
                 .earnedByUser(userId != null && userBadgeRepository.existsByUserIdAndBadgeId(userId, badge.getId()))
                 .build())
                 .collect(Collectors.toList());
@@ -76,18 +77,26 @@ public class BadgeService implements IBadgeService {
     }
 
     @Transactional
-    public Badge createBadge(String name, String description, String iconName, String iconColor) {
+    public Badge createBadge(String name, String description, String iconName, String iconColor, BadgeTier tier) {
         Badge badge = Badge.builder()
                 .name(name)
                 .description(description)
                 .iconName(iconName)
                 .iconColor(iconColor)
+                .tier(tier != null ? tier : BadgeTier.BRONZE)
                 .build();
         return badgeRepository.save(badge);
     }
 
     @Transactional
-    public Badge updateBadge(UUID badgeId, String name, String description, String iconName, String iconColor) {
+    public Badge updateBadge(
+            UUID badgeId,
+            String name,
+            String description,
+            String iconName,
+            String iconColor,
+            BadgeTier tier
+    ) {
         Badge badge = badgeRepository.findByIdAndIsActiveTrue(badgeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Badge", "id", badgeId));
 
@@ -102,6 +111,9 @@ public class BadgeService implements IBadgeService {
         }
         if (iconColor != null) {
             badge.setIconColor(iconColor);
+        }
+        if (tier != null) {
+            badge.setTier(tier);
         }
 
         return badgeRepository.save(badge);
