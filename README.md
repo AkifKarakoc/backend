@@ -60,6 +60,40 @@ mvn spring-boot:run
 
 API endpoints için `TourGuide_API.postman_collection.json` dosyasını Postman'e import edin.
 
+## Grafana ile Log Takibi
+
+Uygulama logları `logs/tourguide-backend.log` dosyasına yazılır. Docker compose içindeki yeni servislerle akış şu şekildedir:
+
+- Spring Boot log dosyasını yazar.
+- Promtail bu dosyayı okuyup Loki'ye gönderir.
+- Grafana Loki datasource'u üzerinden logları sorgular.
+
+### Servisleri başlatma
+
+```bash
+docker-compose up -d
+mvn spring-boot:run
+```
+
+### Erişim bilgileri
+
+- Grafana: `http://localhost:3000`
+- Kullanıcı adı: `admin`
+- Şifre: `admin123`
+- Loki: `http://localhost:3100`
+
+Grafana açıldıktan sonra `Explore` ekranında şu LogQL sorgusu ile backend logları görülebilir:
+
+```logql
+{application="tourguide-backend"}
+```
+
+Sadece hata logları için:
+
+```logql
+{application="tourguide-backend", level="ERROR"}
+```
+
 ## Lisans
 
 Bu proje Dokuz Eylül Üniversitesi Bilgisayar Mühendisliği Bölümü Bitirme Tezi kapsamındadır.

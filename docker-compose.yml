@@ -33,7 +33,45 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
 
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: tourguide-loki
+    command: -config.file=/etc/loki/config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+
+  promtail:
+    image: grafana/promtail:3.4.2
+    container_name: tourguide-promtail
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    volumes:
+      - ./monitoring/promtail/config.yml:/etc/promtail/config.yml:ro
+      - ./logs:/var/log/tourguide:ro
+      - promtail_positions:/tmp
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    container_name: tourguide-grafana
+    depends_on:
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+  loki_data:
+  promtail_positions:
+  grafana_data:
