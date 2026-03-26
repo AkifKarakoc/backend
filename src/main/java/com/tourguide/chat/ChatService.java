@@ -34,11 +34,12 @@ public class ChatService {
                 .build();
 
         session = sessionRepository.save(session);
+        log.info("Chat session created: sessionId={} userId={} language={}", session.getId(), userId, session.getLanguage());
 
         try {
             redisTemplate.opsForValue().set(SESSION_KEY_PREFIX + session.getId(), userId.toString());
         } catch (Exception e) {
-            log.warn("Failed to store chat session in Redis: {}", e.getMessage());
+            log.warn("Failed to cache chat session: sessionId={} userId={} reason={}", session.getId(), userId, e.getMessage());
         }
 
         return session;
@@ -65,6 +66,9 @@ public class ChatService {
                 .content(aiResponse)
                 .build();
         assistantMessage = messageRepository.save(assistantMessage);
+
+        log.info("Chat message processed: sessionId={} userId={} userMessageLength={} assistantMessageId={}",
+                sessionId, userId, request.getContent().length(), assistantMessage.getId());
 
         return ChatResponse.builder()
                 .sessionId(sessionId)
@@ -101,7 +105,9 @@ public class ChatService {
         try {
             redisTemplate.delete(SESSION_KEY_PREFIX + sessionId);
         } catch (Exception e) {
-            log.warn("Failed to remove chat session from Redis: {}", e.getMessage());
+            log.warn("Failed to evict chat session cache: sessionId={} userId={} reason={}", sessionId, userId, e.getMessage());
         }
+
+        log.info("Chat session ended: sessionId={} userId={}", sessionId, userId);
     }
 }

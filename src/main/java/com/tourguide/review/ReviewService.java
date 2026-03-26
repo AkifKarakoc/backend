@@ -46,7 +46,8 @@ public class ReviewService implements IReviewService {
                 .build();
 
         review = reviewRepository.save(review);
-        log.info("Review created for place {} by user {}, pending moderation", placeId, userId);
+        log.info("Review created: reviewId={} placeId={} userId={} rating={} status={}",
+                review.getId(), placeId, userId, review.getRating(), review.getStatus());
         return toResponse(review);
     }
 
@@ -61,6 +62,7 @@ public class ReviewService implements IReviewService {
 
         review.setIsActive(false);
         reviewRepository.save(review);
+        log.info("Review deleted: reviewId={} placeId={} userId={}", reviewId, placeId, userId);
     }
 
     @Transactional
@@ -75,6 +77,8 @@ public class ReviewService implements IReviewService {
         if (status == ReviewStatus.APPROVED) {
             recalculateAvgRating(review.getPlaceId());
         }
+
+        log.info("Review moderated: reviewId={} placeId={} status={}", reviewId, review.getPlaceId(), status);
 
         return toResponse(review);
     }
@@ -92,6 +96,7 @@ public class ReviewService implements IReviewService {
             reviewCount = approvedReviews.size();
         }
         placeService.updateRating(placeId, avgRating, reviewCount);
+        log.info("Place rating recalculated: placeId={} avgRating={} reviewCount={}", placeId, avgRating, reviewCount);
     }
 
     @Transactional(readOnly = true)

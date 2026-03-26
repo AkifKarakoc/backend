@@ -120,6 +120,7 @@ public class QuestService implements IQuestService {
                 .build();
 
         userQuest = userQuestRepository.save(userQuest);
+        log.info("Quest started: questId={} userId={} userQuestId={}", questId, userId, userQuest.getId());
 
         return StartQuestResponse.builder()
                 .userQuestId(userQuest.getId())
@@ -150,6 +151,8 @@ public class QuestService implements IQuestService {
         Place place = placeService.getPlaceEntity(step.getPlaceId());
         double distance = CoordinateUtil.haversineDistance(latitude, longitude, place.getLatitude(), place.getLongitude());
         if (distance > GPS_THRESHOLD_METERS) {
+            log.warn("Quest step verification rejected: questId={} stepId={} userId={} distanceMeters={} thresholdMeters={}",
+                    questId, stepId, userId, distance, GPS_THRESHOLD_METERS);
             throw new GpsCheckFailedException(distance, GPS_THRESHOLD_METERS);
         }
 
@@ -185,6 +188,8 @@ public class QuestService implements IQuestService {
                 .build();
 
         verification = verificationRepository.save(verification);
+        log.info("Quest step verified: questId={} stepId={} userId={} status={} confidence={} expEarned={} photoUploaded={}",
+                questId, stepId, userId, status, confidence, expEarned, photoUrl != null);
 
         // 5. Check if all steps are done
         boolean questCompleted = false;
@@ -228,7 +233,7 @@ public class QuestService implements IQuestService {
                 }
             }
 
-            log.info("Quest {} completed by user {}", questId, userId);
+            log.info("Quest completed: questId={} userId={} approvedSteps={} totalSteps={}", questId, userId, approvedCount, allSteps.size());
             return true;
         }
         return false;

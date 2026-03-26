@@ -30,6 +30,7 @@ public class AuthService {
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
         if (userService.existsByEmail(request.getEmail())) {
+            log.warn("Registration rejected: email already registered email={}", request.getEmail());
             throw new DuplicateResourceException("Email already registered: " + request.getEmail());
         }
 
@@ -49,7 +50,7 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail(), user.getRole());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail(), user.getRole());
 
-        log.info("User registered with ID: {}", user.getId());
+        log.info("User registered: userId={} email={} role={}", user.getId(), user.getEmail(), user.getRole());
 
         return RegisterResponse.builder()
                 .userId(user.getId())
@@ -64,16 +65,20 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         User user = userService.findByEmailActive(request.getEmail())
-                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+                .orElseThrow(() -> {
+                    log.warn("Login failed: active user not found email={}", request.getEmail());
+                    return new UnauthorizedException("Invalid email or password");
+                });
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            log.warn("Login failed: password mismatch userId={} email={}", user.getId(), user.getEmail());
             throw new UnauthorizedException("Invalid email or password");
         }
 
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail(), user.getRole());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail(), user.getRole());
 
-        log.info("User logged in with ID: {}", user.getId());
+        log.info("Login succeeded: userId={} email={} role={}", user.getId(), user.getEmail(), user.getRole());
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
@@ -86,14 +91,17 @@ public class AuthService {
         String refreshToken = request.getRefreshToken();
 
         if (!jwtUtil.validateToken(refreshToken)) {
+            log.warn("Token refresh rejected: invalid refresh token");
             throw new UnauthorizedException("Invalid refresh token");
         }
 
         if (!"refresh".equals(jwtUtil.getTokenType(refreshToken))) {
+            log.warn("Token refresh rejected: token type is not refresh");
             throw new UnauthorizedException("Token is not a refresh token");
         }
 
         if (Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + refreshToken))) {
+            log.warn("Token refresh rejected: refresh token already revoked");
             throw new UnauthorizedException("Refresh token has been revoked");
         }
 
@@ -110,6 +118,8 @@ public class AuthService {
         String newAccessToken = jwtUtil.generateAccessToken(userId, email, role);
         String newRefreshToken = jwtUtil.generateRefreshToken(userId, email, role);
 
+        log.info("Token refresh succeeded: userId={} email={} role={}", userId, email, role);
+
         return RefreshResponse.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
@@ -118,17 +128,22 @@ public class AuthService {
 
     public void logout(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.debug("Logout skipped: missing or invalid authorization header");
             return;
         }
 
         String token = authHeader.substring(7);
         if (jwtUtil.validateToken(token)) {
+            var userId = jwtUtil.getUserId(token);
+            var email = jwtUtil.getEmail(token);
             long ttl = jwtUtil.getExpirationMillis(token);
             if (ttl > 0) {
                 redisTemplate.opsForValue().set(BLACKLIST_PREFIX + token, "revoked", ttl, TimeUnit.MILLISECONDS);
             }
+            log.info("Logout succeeded: userId={} email={} remainingTokenTtlMs={}", userId, email, ttl);
+            return;
         }
 
-        log.info("User logged out");
+        log.warn("Logout skipped: token validation failed");
     }
 }

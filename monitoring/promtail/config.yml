@@ -18,12 +18,17 @@ scrape_configs:
           environment: local
           __path__: /var/log/tourguide/*.log
     pipeline_stages:
-      - regex:
-          expression: "^(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}) \\[(?P<thread>[^\\]]+)] (?P<level>[A-Z]+)\\s+(?P<logger>[^-]+) - (?P<message>.*)$"
+      - logfmt:
+          mapping:
+            ts:
+            level:
+            thread:
+            logger:
+            msg:
       - labels:
           level:
-          thread:
-          logger:
       - timestamp:
-          source: timestamp
-          format: "2006-01-02 15:04:05.000"
+          source: ts
+          format: "2006-01-02T15:04:05.000Z07:00"
+      - output:
+          source: msg

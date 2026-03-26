@@ -44,6 +44,7 @@ public class PlaceService implements IPlaceService {
         // Check cache
         List<PlaceResponse> cached = (List<PlaceResponse>) redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
+            log.debug("Nearby places cache hit: geohash={} radius={} limit={} resultCount={}", geohash, searchRadius, searchLimit, cached.size());
             // Enrich with favorite status for current user
             if (userId != null) {
                 cached.forEach(p -> p.setIsFavorited(userService.isFavorited(userId, p.getId())));
@@ -68,7 +69,8 @@ public class PlaceService implements IPlaceService {
         try {
             redisTemplate.opsForValue().set(cacheKey, responses, CACHE_TTL, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.warn("Failed to cache nearby places: {}", e.getMessage());
+            log.warn("Failed to cache nearby places: geohash={} radius={} limit={} resultCount={} reason={}",
+                    geohash, searchRadius, searchLimit, responses.size(), e.getMessage());
         }
 
         return responses;
@@ -89,6 +91,7 @@ public class PlaceService implements IPlaceService {
     @Transactional(readOnly = true)
     public List<PlaceResponse> search(String query, UUID userId) {
         List<Place> places = placeRepository.search(query);
+        log.debug("Place search executed: query={} userId={} resultCount={}", query, userId, places.size());
 
         return places.stream()
                 .map(place -> {

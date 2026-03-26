@@ -42,20 +42,26 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(BEARER_PREFIX.length());
+        String method = request.getMethod();
+        String path = request.getRequestURI();
+        String clientIp = request.getRemoteAddr();
 
         try {
             if (!jwtUtil.validateToken(token)) {
+                log.debug("JWT ignored: invalid token method={} path={} clientIp={}", method, path, clientIp);
                 filterChain.doFilter(request, response);
                 return;
             }
 
             if (isTokenBlacklisted(token)) {
+                log.warn("JWT rejected: blacklisted token method={} path={} clientIp={}", method, path, clientIp);
                 filterChain.doFilter(request, response);
                 return;
             }
 
             String tokenType = jwtUtil.getTokenType(token);
             if (!"access".equals(tokenType)) {
+                log.warn("JWT rejected: non-access token type={} method={} path={} clientIp={}", tokenType, method, path, clientIp);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -71,8 +77,9 @@ public class JwtFilter extends OncePerRequestFilter {
                     );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            log.debug("JWT authenticated: userId={} role={} method={} path={}", userId, role, method, path);
         } catch (Exception e) {
-            log.warn("JWT authentication failed: {}", e.getMessage());
+            log.warn("JWT authentication failed: method={} path={} clientIp={} reason={}", method, path, clientIp, e.getMessage());
         }
 
         filterChain.doFilter(request, response);

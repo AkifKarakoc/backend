@@ -56,6 +56,8 @@ public class UserService implements IUserService {
         }
 
         user = userRepository.save(user);
+        log.info("User profile updated: userId={} preferredLanguage={} ageGroup={}",
+                userId, user.getPreferredLanguage(), user.getAgeGroup());
         return userMapper.toResponse(user);
     }
 
@@ -71,6 +73,7 @@ public class UserService implements IUserService {
         String fileName = minioUtil.upload(PROFILE_PHOTOS_BUCKET, file);
         user.setProfilePhotoUrl(fileName);
         user = userRepository.save(user);
+        log.info("User profile photo updated: userId={} fileName={}", userId, fileName);
 
         return userMapper.toResponse(user);
     }
@@ -98,6 +101,7 @@ public class UserService implements IUserService {
                 .build();
 
         favorite = favoriteRepository.save(favorite);
+        log.info("Favorite added: favoriteId={} userId={} placeId={}", favorite.getId(), userId, favorite.getPlaceId());
 
         return FavoriteResponse.builder()
                 .id(favorite.getId())
@@ -116,6 +120,7 @@ public class UserService implements IUserService {
         }
 
         favoriteRepository.delete(favorite);
+        log.info("Favorite removed: favoriteId={} userId={} placeId={}", favoriteId, userId, favorite.getPlaceId());
     }
 
     @Transactional
@@ -128,7 +133,8 @@ public class UserService implements IUserService {
         user.setLevel(newLevel);
 
         userRepository.save(user);
-        log.info("User {} gained {} EXP, now at level {}", userId, points, newLevel);
+        log.info("User EXP updated: userId={} gainedExp={} totalExp={} level={}",
+                userId, points, user.getExpPoints(), newLevel);
     }
 
     @Transactional(readOnly = true)
@@ -156,7 +162,9 @@ public class UserService implements IUserService {
             throw new UnauthorizedException("SuperAdmin role cannot be modified.");
         }
         user.setRole(role);
-        return userRepository.save(user);
+        user = userRepository.save(user);
+        log.info("User role updated: userId={} role={}", userId, role);
+        return user;
     }
 
     @Override
@@ -168,7 +176,9 @@ public class UserService implements IUserService {
             throw new UnauthorizedException("SuperAdmin account cannot be deactivated.");
         }
         user.setIsActive(isActive);
-        return userRepository.save(user);
+        user = userRepository.save(user);
+        log.info("User status updated: userId={} isActive={}", userId, isActive);
+        return user;
     }
 
     @Override

@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Simple in-memory rate limiting filter for auth endpoints.
  * Limits each IP to a maximum number of requests per time window.
  */
+@Slf4j
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -49,6 +51,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         });
 
         if (entry.count.get() > MAX_REQUESTS) {
+            log.warn("Rate limit exceeded: ip={} method={} path={} requestCount={} windowMs={}",
+                    clientIp, request.getMethod(), path, entry.count.get(), WINDOW_MS);
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType("application/json");
             response.getWriter().write(
@@ -67,7 +71,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Scheduled(fixedRate = 300_000)
     public void cleanupExpiredEntries() {
         long now = System.currentTimeMillis();
+        int before = requestCounts.size();
         requestCounts.entrySet().removeIf(entry -> now - entry.getValue().windowStart > WINDOW_MS);
+        int removed = before - requestCounts.size();
+        if (removed > 0) {
+            log.debug("Rate limit cache cleanup completed: removedEntries={} remainingEntries={}", removed, requestCounts.size());
+        }
     }
 
     private String getClientIp(HttpServletRequest request) {

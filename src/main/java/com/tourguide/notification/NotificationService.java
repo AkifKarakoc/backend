@@ -64,6 +64,7 @@ public class NotificationService {
     @Transactional
     public void registerDeviceToken(UUID userId, DeviceTokenRequest request) {
         if (deviceTokenRepository.existsByUserIdAndToken(userId, request.getToken())) {
+            log.debug("Device token registration skipped: userId={} platform={} reason=duplicate", userId, request.getPlatform());
             return;
         }
 
@@ -74,7 +75,7 @@ public class NotificationService {
                 .build();
 
         deviceTokenRepository.save(deviceToken);
-        log.info("Device token registered for user {}", userId);
+        log.info("Device token registered: userId={} platform={}", userId, request.getPlatform());
     }
 
     @Transactional
@@ -87,7 +88,7 @@ public class NotificationService {
                 .build();
 
         notificationRepository.save(notification);
-        log.info("Notification sent to user {}: {}", userId, title);
+        log.info("Notification created: userId={} type={} title={}", userId, type, title);
         // FCM push stub - would call Firebase here in production
     }
 

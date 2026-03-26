@@ -36,9 +36,12 @@ public class MinioUtil {
                     .stream(inputStream, file.getSize(), -1)
                     .contentType(file.getContentType())
                     .build());
-            log.info("Uploaded file {} to bucket {}", fileName, bucket);
+            log.info("MinIO upload succeeded: bucket={} fileName={} originalName={} size={} contentType={}",
+                    bucket, fileName, file.getOriginalFilename(), file.getSize(), file.getContentType());
             return fileName;
         } catch (Exception e) {
+            log.error("MinIO upload failed: bucket={} originalName={} size={} reason={}",
+                    bucket, file.getOriginalFilename(), file.getSize(), e.getMessage(), e);
             throw new RuntimeException("Failed to upload file to MinIO", e);
         }
     }
@@ -49,9 +52,9 @@ public class MinioUtil {
                     .bucket(bucket)
                     .object(fileName)
                     .build());
-            log.info("Deleted file {} from bucket {}", fileName, bucket);
+            log.info("MinIO delete succeeded: bucket={} fileName={}", bucket, fileName);
         } catch (Exception e) {
-            log.warn("Failed to delete file {} from bucket {}: {}", fileName, bucket, e.getMessage());
+            log.warn("MinIO delete failed: bucket={} fileName={} reason={}", bucket, fileName, e.getMessage());
         }
     }
 

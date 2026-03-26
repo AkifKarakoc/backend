@@ -29,8 +29,8 @@ logging:
   file:
     name: logs/tourguide-backend.log
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "ts=\"%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}\" level=%level thread=%thread logger=%logger{36} msg=\"%replace(%msg){'\"','\\\\\"'}\"%n"
+    file: "ts=\"%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}\" level=%level thread=%thread logger=%logger{36} msg=\"%replace(%msg){'\"','\\\\\"'}\"%n"
   logback:
     rollingpolicy:
       max-file-size: 10MB
