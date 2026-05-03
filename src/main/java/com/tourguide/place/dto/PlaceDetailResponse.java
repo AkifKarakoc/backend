@@ -2,6 +2,7 @@ package com.tourguide.place.dto;
 
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -26,4 +27,6 @@ public class PlaceDetailResponse {
     private Double avgRating;
     private Integer reviewCount;
     private Boolean isFavorited;
+    private Integer popularityScore;
+    private List<String> keywords;
 }

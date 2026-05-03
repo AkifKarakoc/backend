@@ -2,6 +2,7 @@ package com.tourguide.admin.contenteditor.dto;
 
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -23,4 +24,9 @@ public class PlaceAdminResponse {
     private String website;
     private String openingHours;
     private String photoUrl;
+    private Integer popularityScore;
+    private List<String> keywords;
+    private Boolean isActive;
+    private Double avgRating;
+    private Integer reviewCount;
 }

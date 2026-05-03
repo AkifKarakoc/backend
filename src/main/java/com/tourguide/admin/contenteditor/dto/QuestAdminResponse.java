@@ -17,4 +17,5 @@ public class QuestAdminResponse {
     private String region;
     private String thumbnailUrl;
     private UUID badgeId;
+    private Boolean isActive;
 }

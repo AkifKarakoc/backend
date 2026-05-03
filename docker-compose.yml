@@ -1,17 +1,5 @@
 
 services:
-  postgres:
-    image: postgis/postgis:15-3.4
-    container_name: tourguide-postgres
-    environment:
-      POSTGRES_DB: tourguide
-      POSTGRES_USER: tourguide
-      POSTGRES_PASSWORD: tourguide123
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
   redis:
     image: redis:7-alpine
     container_name: tourguide-redis
@@ -34,6 +22,5 @@ services:
     command: server /data --console-address ":9001"
 
 volumes:
-  postgres_data:
   redis_data:
   minio_data:

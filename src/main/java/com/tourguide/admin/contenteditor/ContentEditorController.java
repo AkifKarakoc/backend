@@ -12,8 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin/editor")
@@ -21,6 +22,13 @@ import java.util.List;
 public class ContentEditorController {
 
     private final ContentEditorService contentEditorService;
+
+    @GetMapping("/places")
+    public ResponseEntity<List<PlaceAdminResponse>> getPlaces() {
+        return ResponseEntity.ok(
+            contentEditorService.findAllPlaces().stream().map(this::toPlaceResponse).collect(Collectors.toList())
+        );
+    }
 
     @PostMapping("/places")
     public ResponseEntity<PlaceAdminResponse> createPlace(@Valid @RequestBody CreatePlaceRequest request) {
@@ -41,6 +49,13 @@ public class ContentEditorController {
     }
 
     // --- Quests ---
+    @GetMapping("/quests")
+    public ResponseEntity<List<QuestAdminResponse>> getQuests() {
+        return ResponseEntity.ok(
+            contentEditorService.findAllQuests().stream().map(this::toQuestResponse).collect(Collectors.toList())
+        );
+    }
+
     @PostMapping("/quests")
     public ResponseEntity<QuestAdminResponse> createQuest(@Valid @RequestBody CreateQuestRequest request) {
         Quest quest = contentEditorService.createQuest(request);
@@ -80,6 +95,13 @@ public class ContentEditorController {
     }
 
     // --- Badges ---
+    @GetMapping("/badges")
+    public ResponseEntity<List<BadgeAdminResponse>> getBadges() {
+        return ResponseEntity.ok(
+            contentEditorService.findAllBadges().stream().map(this::toBadgeResponse).collect(Collectors.toList())
+        );
+    }
+
     @PostMapping("/badges")
     public ResponseEntity<BadgeAdminResponse> createBadge(@Valid @RequestBody CreateBadgeRequest request) {
         Badge badge = contentEditorService.createBadge(request);
@@ -116,6 +138,11 @@ public class ContentEditorController {
                 .website(place.getWebsite())
                 .openingHours(place.getOpeningHours())
                 .photoUrl(place.getPhotoUrl())
+                .popularityScore(place.getPopularityScore())
+                .keywords(place.getKeywords())
+                .isActive(place.getIsActive())
+                .avgRating(place.getAvgRating())
+                .reviewCount(place.getReviewCount())
                 .build();
     }
 
@@ -128,6 +155,7 @@ public class ContentEditorController {
                 .region(quest.getRegion())
                 .thumbnailUrl(quest.getThumbnailUrl())
                 .badgeId(quest.getBadgeId())
+                .isActive(quest.getIsActive())
                 .build();
     }
 
@@ -153,6 +181,7 @@ public class ContentEditorController {
                 .iconName(badge.getIconName())
                 .iconColor(badge.getIconColor())
                 .tier(badge.getTier() != null ? badge.getTier().name() : null)
+                .isActive(badge.getIsActive())
                 .build();
     }
 }

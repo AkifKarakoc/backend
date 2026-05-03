@@ -1,8 +1,12 @@
 package com.tourguide.place;
 
 import com.tourguide.common.entity.BaseEntity;
+import com.tourguide.common.util.StringListConverter;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "places")
@@ -62,4 +66,13 @@ public class Place extends BaseEntity {
 
     @Column(name = "photo_url", length = 500)
     private String photoUrl;
+
+    @Column(name = "popularity_score")
+    @Builder.Default
+    private Integer popularityScore = 5;
+
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "keywords", columnDefinition = "text")
+    @Builder.Default
+    private List<String> keywords = new ArrayList<>();
 }

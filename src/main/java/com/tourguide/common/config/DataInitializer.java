@@ -49,16 +49,16 @@ public class DataInitializer implements ApplicationRunner {
     private static final String SUPERADMIN_EMAIL = "superadmin@tourguide.com";
     private static final String SUPERADMIN_PASSWORD = "Admin@1234";
     private static final String MOCK_PASSWORD = "User@1234";
-
+    
     @Override
     public void run(ApplicationArguments args) {
         seedSuperAdmin();
 
         if (Arrays.asList(environment.getActiveProfiles()).contains("dev")) {
-            seedMockData();
+            //seedMockData();
         }
     }
-
+    
     private void seedSuperAdmin() {
         if (!userService.existsByEmail(SUPERADMIN_EMAIL)) {
             User admin = User.builder()

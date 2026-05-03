@@ -16,4 +16,5 @@ public class BadgeAdminResponse {
     private String iconName;
     private String iconColor;
     private String tier;
+    private Boolean isActive;
 }

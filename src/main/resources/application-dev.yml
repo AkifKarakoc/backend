@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/tourguide
-    username: tourguide
-    password: tourguide123
+    url: jdbc:postgresql://db-postgresql-fra1-24379-do-user-36243951-0.l.db.ondigitalocean.com:25060/defaultdb?sslmode=require&sslrootcert=./ca-certificate.crt
+    username: doadmin
+    password: ${DO_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -10,14 +10,14 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 # MinIO Configuration
 minio:
-  endpoint: http://localhost:9000
-  access-key: minioadmin
-  secret-key: minioadmin123
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
   buckets:
     profile-photos: profile-photos
     place-images: place-images
@@ -26,13 +26,13 @@ minio:
 
 # JWT Configuration
 jwt:
-  secret: a3f1b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2
+  secret: ${JWT_SECRET}
   access-token-expiration: 86400000
   refresh-token-expiration: 604800000
 
 # AI Service Configuration
 ai-service:
-  base-url: http://localhost:8000
+  base-url: ${AI_SERVICE_URL:http://localhost:8000}
   timeout: 30000
 
 # Pilot Zone Configuration (Izmir bounds)

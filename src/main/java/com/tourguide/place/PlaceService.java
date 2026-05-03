@@ -155,6 +155,12 @@ public class PlaceService implements IPlaceService {
         if (updates.getPhotoUrl() != null) {
             existing.setPhotoUrl(updates.getPhotoUrl());
         }
+        if (updates.getPopularityScore() != null) {
+            existing.setPopularityScore(updates.getPopularityScore());
+        }
+        if (updates.getKeywords() != null) {
+            existing.setKeywords(updates.getKeywords());
+        }
 
         return placeRepository.save(existing);
     }

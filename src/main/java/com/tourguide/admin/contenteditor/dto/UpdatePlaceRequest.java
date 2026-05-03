@@ -1,10 +1,14 @@
 package com.tourguide.admin.contenteditor.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -44,4 +48,10 @@ public class UpdatePlaceRequest {
 
     @Size(max = 500, message = "Photo URL must not exceed 500 characters")
     private String photoUrl;
+
+    @Min(value = 1, message = "Popularity score must be at least 1")
+    @Max(value = 100, message = "Popularity score must be at most 100")
+    private Integer popularityScore;
+
+    private List<String> keywords;
 }

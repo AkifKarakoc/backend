@@ -7,11 +7,14 @@ import com.tourguide.admin.contenteditor.dto.CreateRouteRequest;
 import com.tourguide.admin.contenteditor.dto.UpdateQuestRequest;
 import com.tourguide.admin.contenteditor.dto.UpdatePlaceRequest;
 import com.tourguide.badge.Badge;
+import com.tourguide.badge.BadgeRepository;
 import com.tourguide.badge.IBadgeService;
 import com.tourguide.place.IPlaceService;
 import com.tourguide.place.Place;
+import com.tourguide.place.PlaceRepository;
 import com.tourguide.quest.IQuestService;
 import com.tourguide.quest.Quest;
+import com.tourguide.quest.QuestRepository;
 import com.tourguide.quest.QuestStep;
 import com.tourguide.route.IRouteService;
 import com.tourguide.route.Route;
@@ -33,6 +36,25 @@ public class ContentEditorService {
     private final IQuestService questService;
     private final IRouteService routeService;
     private final IBadgeService badgeService;
+    private final PlaceRepository placeRepository;
+    private final QuestRepository questRepository;
+    private final BadgeRepository badgeRepository;
+
+    // --- Admin list queries ---
+    @Transactional(readOnly = true)
+    public List<Place> findAllPlaces() {
+        return placeRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Quest> findAllQuests() {
+        return questRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Badge> findAllBadges() {
+        return badgeRepository.findAll();
+    }
 
     // --- Places ---
     @Transactional
@@ -50,6 +72,8 @@ public class ContentEditorService {
                 .website(request.getWebsite())
                 .openingHours(request.getOpeningHours())
                 .photoUrl(request.getPhotoUrl())
+                .popularityScore(request.getPopularityScore() != null ? request.getPopularityScore() : 5)
+                .keywords(request.getKeywords() != null ? request.getKeywords() : new java.util.ArrayList<>())
                 .build();
         return placeService.createPlace(place);
     }
@@ -69,6 +93,8 @@ public class ContentEditorService {
                 .website(request.getWebsite())
                 .openingHours(request.getOpeningHours())
                 .photoUrl(request.getPhotoUrl())
+                .popularityScore(request.getPopularityScore())
+                .keywords(request.getKeywords())
                 .build();
         return placeService.updatePlace(placeId, updates);
     }
