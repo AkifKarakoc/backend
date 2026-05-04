@@ -1,6 +1,7 @@
 package com.tourguide.place;
 
 import com.tourguide.place.dto.PlaceDetailResponse;
+import com.tourguide.admin.contenteditor.dto.PlaceMapPointResponse;
 import com.tourguide.place.dto.PlaceResponse;
 
 import java.util.List;
@@ -13,6 +14,8 @@ public interface IPlaceService {
     PlaceDetailResponse findById(UUID placeId, UUID userId);
 
     List<PlaceResponse> search(String query, UUID userId);
+
+    List<PlaceMapPointResponse> findMapPoints();
 
     Place getPlaceEntity(UUID placeId);
 

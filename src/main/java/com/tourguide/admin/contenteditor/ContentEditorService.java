@@ -4,11 +4,15 @@ import com.tourguide.admin.contenteditor.dto.CreateBadgeRequest;
 import com.tourguide.admin.contenteditor.dto.CreatePlaceRequest;
 import com.tourguide.admin.contenteditor.dto.CreateQuestRequest;
 import com.tourguide.admin.contenteditor.dto.CreateRouteRequest;
+import com.tourguide.admin.contenteditor.dto.PlaceMapPointResponse;
 import com.tourguide.admin.contenteditor.dto.UpdateQuestRequest;
 import com.tourguide.admin.contenteditor.dto.UpdatePlaceRequest;
+import com.tourguide.admin.contenteditor.dto.PlaceAdminDetailResponse;
+import com.tourguide.admin.contenteditor.dto.PlaceAdminListItemResponse;
 import com.tourguide.badge.Badge;
 import com.tourguide.badge.BadgeRepository;
 import com.tourguide.badge.IBadgeService;
+import com.tourguide.common.exception.ResourceNotFoundException;
 import com.tourguide.place.IPlaceService;
 import com.tourguide.place.Place;
 import com.tourguide.place.PlaceRepository;
@@ -44,6 +48,56 @@ public class ContentEditorService {
     @Transactional(readOnly = true)
     public List<Place> findAllPlaces() {
         return placeRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlaceAdminListItemResponse> findPlaceListItems() {
+        return placeRepository.findAdminListItems();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlaceMapPointResponse> findPlaceMapPoints() {
+        return placeRepository.findAll().stream()
+                .filter(place -> place.getLatitude() != null && place.getLongitude() != null)
+                .map(place -> PlaceMapPointResponse.builder()
+                        .id(place.getId())
+                        .name(place.getName())
+                        .nameTr(place.getNameTr())
+                        .nameEn(place.getNameEn())
+                        .category(place.getCategory())
+                        .address(place.getAddress())
+                        .latitude(place.getLatitude())
+                        .longitude(place.getLongitude())
+                        .isActive(place.getIsActive())
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PlaceAdminDetailResponse findPlaceById(UUID placeId) {
+        Place place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Place", "id", placeId));
+
+        return PlaceAdminDetailResponse.builder()
+                .id(place.getId())
+                .name(place.getName())
+                .nameTr(place.getNameTr())
+                .nameEn(place.getNameEn())
+                .category(place.getCategory())
+                .latitude(place.getLatitude())
+                .longitude(place.getLongitude())
+                .description(place.getDescription())
+                .address(place.getAddress())
+                .phone(place.getPhone())
+                .website(place.getWebsite())
+                .openingHours(place.getOpeningHours())
+                .photoUrl(place.getPhotoUrl())
+                .popularityScore(place.getPopularityScore())
+                .keywords(place.getKeywords())
+                .isActive(place.getIsActive())
+                .avgRating(place.getAvgRating())
+                .reviewCount(place.getReviewCount())
+                .build();
     }
 
     @Transactional(readOnly = true)
