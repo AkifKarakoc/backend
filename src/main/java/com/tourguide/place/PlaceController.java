@@ -2,6 +2,7 @@ package com.tourguide.place;
 
 import com.tourguide.place.dto.PlaceDetailResponse;
 import com.tourguide.place.dto.PlaceResponse;
+import com.tourguide.admin.contenteditor.dto.PlaceMapPointResponse;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -42,5 +43,10 @@ public class PlaceController {
             @RequestParam @Size(max = 100, message = "Search query must not exceed 100 characters") String query,
             @AuthenticationPrincipal UUID userId) {
         return ResponseEntity.ok(placeService.search(query, userId));
+    }
+
+    @GetMapping("/map-points")
+    public ResponseEntity<List<PlaceMapPointResponse>> getMapPoints() {
+        return ResponseEntity.ok(placeService.findMapPoints());
     }
 }

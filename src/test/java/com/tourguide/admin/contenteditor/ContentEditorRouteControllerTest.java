@@ -5,9 +5,11 @@ import com.tourguide.common.exception.GlobalExceptionHandler;
 import com.tourguide.place.IPlaceService;
 import com.tourguide.place.PlaceRepository;
 import com.tourguide.quest.IQuestService;
+import com.tourguide.quest.QuestRepository;
 import com.tourguide.route.RoutePlaceRepository;
 import com.tourguide.route.RouteRepository;
 import com.tourguide.route.RouteService;
+import com.tourguide.badge.BadgeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -28,13 +30,18 @@ class ContentEditorRouteControllerTest {
         RouteRepository routeRepository = mock(RouteRepository.class);
         RoutePlaceRepository routePlaceRepository = mock(RoutePlaceRepository.class);
         PlaceRepository placeRepository = mock(PlaceRepository.class);
+        QuestRepository questRepository = mock(QuestRepository.class);
+        BadgeRepository badgeRepository = mock(BadgeRepository.class);
 
         RouteService routeService = new RouteService(routeRepository, routePlaceRepository, placeRepository);
         ContentEditorService contentEditorService = new ContentEditorService(
                 mock(IPlaceService.class),
                 mock(IQuestService.class),
                 routeService,
-                mock(IBadgeService.class)
+                mock(IBadgeService.class),
+                placeRepository,
+                questRepository,
+                badgeRepository
         );
 
         ContentEditorController controller = new ContentEditorController(contentEditorService);

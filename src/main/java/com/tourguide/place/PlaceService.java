@@ -3,6 +3,7 @@ package com.tourguide.place;
 import com.tourguide.common.exception.ResourceNotFoundException;
 import com.tourguide.common.util.CoordinateUtil;
 import com.tourguide.common.util.GeohashUtil;
+import com.tourguide.admin.contenteditor.dto.PlaceMapPointResponse;
 import com.tourguide.place.dto.PlaceDetailResponse;
 import com.tourguide.place.dto.PlaceResponse;
 import com.tourguide.user.IUserService;
@@ -100,6 +101,25 @@ public class PlaceService implements IPlaceService {
                 })
                 .collect(Collectors.toList());
     }
+
+            @Override
+            @Transactional(readOnly = true)
+            public List<PlaceMapPointResponse> findMapPoints() {
+            return placeRepository.findByIsActiveTrue().stream()
+                .filter(place -> place.getLatitude() != null && place.getLongitude() != null)
+                .map(place -> PlaceMapPointResponse.builder()
+                    .id(place.getId())
+                    .name(place.getName())
+                    .nameTr(place.getNameTr())
+                    .nameEn(place.getNameEn())
+                    .category(place.getCategory())
+                    .address(place.getAddress())
+                    .latitude(place.getLatitude())
+                    .longitude(place.getLongitude())
+                    .isActive(place.getIsActive())
+                    .build())
+                .collect(Collectors.toList());
+            }
 
     @Override
     public Place getPlaceEntity(UUID placeId) {

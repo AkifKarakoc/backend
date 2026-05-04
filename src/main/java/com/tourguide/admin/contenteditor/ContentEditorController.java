@@ -3,6 +3,7 @@ package com.tourguide.admin.contenteditor;
 import com.tourguide.admin.contenteditor.dto.*;
 import com.tourguide.badge.Badge;
 import com.tourguide.place.Place;
+import com.tourguide.place.dto.PlaceResponse;
 import com.tourguide.quest.Quest;
 import com.tourguide.route.Route;
 import com.tourguide.route.dto.RouteResponse;
@@ -24,10 +25,18 @@ public class ContentEditorController {
     private final ContentEditorService contentEditorService;
 
     @GetMapping("/places")
-    public ResponseEntity<List<PlaceAdminResponse>> getPlaces() {
-        return ResponseEntity.ok(
-            contentEditorService.findAllPlaces().stream().map(this::toPlaceResponse).collect(Collectors.toList())
-        );
+    public ResponseEntity<List<PlaceAdminListItemResponse>> getPlaces() {
+        return ResponseEntity.ok(contentEditorService.findPlaceListItems());
+    }
+
+    @GetMapping("/places/map-points")
+    public ResponseEntity<List<PlaceMapPointResponse>> getPlaceMapPoints() {
+        return ResponseEntity.ok(contentEditorService.findPlaceMapPoints());
+    }
+
+    @GetMapping("/places/{id}")
+    public ResponseEntity<PlaceAdminDetailResponse> getPlace(@PathVariable UUID id) {
+        return ResponseEntity.ok(contentEditorService.findPlaceById(id));
     }
 
     @PostMapping("/places")

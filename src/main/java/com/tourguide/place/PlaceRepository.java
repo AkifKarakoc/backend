@@ -1,5 +1,6 @@
 package com.tourguide.place;
 
+import com.tourguide.admin.contenteditor.dto.PlaceAdminListItemResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,6 +34,21 @@ public interface PlaceRepository extends JpaRepository<Place, UUID> {
     Optional<Place> findByIdAndIsActiveTrue(UUID id);
 
     Optional<Place> findByExternalId(String externalId);
+
+    @Query("""
+            SELECT new com.tourguide.admin.contenteditor.dto.PlaceAdminListItemResponse(
+                p.id,
+                COALESCE(p.nameTr, p.name),
+                p.category,
+                p.address,
+                p.avgRating,
+                p.reviewCount,
+                p.isActive
+            )
+            FROM Place p
+            ORDER BY p.createdAt DESC
+            """)
+    List<PlaceAdminListItemResponse> findAdminListItems();
 
     // ── Dashboard aggregate queries ──
 
