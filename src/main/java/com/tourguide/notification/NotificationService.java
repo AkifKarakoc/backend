@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -63,16 +64,19 @@ public class NotificationService {
 
     @Transactional
     public void registerDeviceToken(UUID userId, DeviceTokenRequest request) {
-        if (deviceTokenRepository.existsByUserIdAndToken(userId, request.getToken())) {
-            return;
-        }
+        PushProvider provider = resolveProvider(request.getProvider());
 
-        DeviceToken deviceToken = DeviceToken.builder()
-                .userId(userId)
-                .token(request.getToken())
-                .platform(request.getPlatform())
-                .build();
+        DeviceToken deviceToken = deviceTokenRepository.findByUserIdAndToken(userId, request.getToken())
+                .orElseGet(() -> DeviceToken.builder()
+                        .userId(userId)
+                        .token(request.getToken())
+                        .build());
 
+        deviceToken.setPlatform(request.getPlatform());
+        deviceToken.setProvider(provider);
+        deviceToken.setIsActive(true);
+        deviceToken.setLastSeenAt(LocalDateTime.now());
+        deviceToken.setUpdatedAt(LocalDateTime.now());
         deviceTokenRepository.save(deviceToken);
         log.info("Device token registered for user {}", userId);
     }
@@ -91,12 +95,21 @@ public class NotificationService {
         // FCM push stub - would call Firebase here in production
     }
 
+    private PushProvider resolveProvider(String provider) {
+        if (provider == null || provider.isBlank()) {
+            return PushProvider.FCM;
+        }
+        return PushProvider.valueOf(provider.trim().toUpperCase());
+    }
+
     private NotificationResponse toResponse(Notification notification) {
         return NotificationResponse.builder()
                 .id(notification.getId())
                 .type(notification.getType().name())
                 .title(notification.getTitle())
                 .body(notification.getBody())
+                .deepLink(notification.getDeepLink())
+                .data(notification.getData())
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();

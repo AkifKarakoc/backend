@@ -2,6 +2,7 @@ package com.tourguide.admin.contenteditor;
 
 import com.tourguide.admin.contenteditor.dto.*;
 import com.tourguide.badge.Badge;
+import com.tourguide.notification.IAdminNotificationService;
 import com.tourguide.place.Place;
 import com.tourguide.place.dto.PlaceResponse;
 import com.tourguide.quest.Quest;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 public class ContentEditorController {
 
     private final ContentEditorService contentEditorService;
+    private final IAdminNotificationService adminNotificationService;
 
     @GetMapping("/places")
     public ResponseEntity<List<PlaceAdminListItemResponse>> getPlaces() {
@@ -101,6 +103,15 @@ public class ContentEditorController {
     public ResponseEntity<Void> deleteRoute(@PathVariable UUID id) {
         contentEditorService.deleteRoute(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // --- Notifications ---
+    @PostMapping("/notifications")
+    public ResponseEntity<AdminSendNotificationResponse> sendNotification(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal UUID adminUserId,
+            @Valid @RequestBody AdminSendNotificationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(adminNotificationService.sendNotification(adminUserId, request));
     }
 
     // --- Badges ---

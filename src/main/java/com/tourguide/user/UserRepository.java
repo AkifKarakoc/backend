@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import com.tourguide.common.enums.Role;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,4 +41,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<Object[]> countGroupedByLevel();
 
     List<User> findByIsActiveTrueOrderByExpPointsDesc(Pageable pageable);
+
+    List<User> findByRoleAndIsActiveTrue(Role role);
+
+    List<User> findByIdInAndRoleAndIsActiveTrue(List<UUID> ids, Role role);
 }
