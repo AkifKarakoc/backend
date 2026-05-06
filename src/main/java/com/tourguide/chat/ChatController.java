@@ -37,6 +37,12 @@ public class ChatController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/sessions")
+    public ResponseEntity<List<ChatSessionResponse>> getSessions(
+            @AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(chatService.getSessions(userId));
+    }
+
     @PostMapping("/sessions/{id}/messages")
     public ResponseEntity<ChatResponse> sendMessage(
             @AuthenticationPrincipal UUID userId,

@@ -9,6 +9,7 @@ import com.tourguide.quest.QuestRepository;
 import com.tourguide.route.RoutePlaceRepository;
 import com.tourguide.route.RouteRepository;
 import com.tourguide.route.RouteService;
+import com.tourguide.route.UserRouteRepository;
 import com.tourguide.badge.BadgeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,10 +31,11 @@ class ContentEditorRouteControllerTest {
         RouteRepository routeRepository = mock(RouteRepository.class);
         RoutePlaceRepository routePlaceRepository = mock(RoutePlaceRepository.class);
         PlaceRepository placeRepository = mock(PlaceRepository.class);
+        UserRouteRepository userRouteRepository = mock(UserRouteRepository.class);
         QuestRepository questRepository = mock(QuestRepository.class);
         BadgeRepository badgeRepository = mock(BadgeRepository.class);
 
-        RouteService routeService = new RouteService(routeRepository, routePlaceRepository, placeRepository);
+        RouteService routeService = new RouteService(routeRepository, routePlaceRepository, placeRepository, userRouteRepository);
         ContentEditorService contentEditorService = new ContentEditorService(
                 mock(IPlaceService.class),
                 mock(IQuestService.class),

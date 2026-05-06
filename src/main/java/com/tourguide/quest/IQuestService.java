@@ -3,6 +3,7 @@ package com.tourguide.quest;
 import com.tourguide.quest.dto.QuestDetailResponse;
 import com.tourguide.quest.dto.QuestResponse;
 import com.tourguide.quest.dto.StartQuestResponse;
+import com.tourguide.quest.dto.UserQuestResponse;
 import com.tourguide.quest.dto.VerifyStepResponse;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,4 +30,6 @@ public interface IQuestService {
 
     QuestVerification moderateVerification(UUID verificationId, VerificationStatus status,
             String moderatorNote, Integer expEarned);
+
+    List<UserQuestResponse> getUserQuests(UUID userId);
 }

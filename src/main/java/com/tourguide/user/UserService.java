@@ -5,6 +5,10 @@ import com.tourguide.common.exception.DuplicateResourceException;
 import com.tourguide.common.exception.ResourceNotFoundException;
 import com.tourguide.common.exception.UnauthorizedException;
 import com.tourguide.common.util.MinioUtil;
+import com.tourguide.notification.NotificationService;
+import com.tourguide.notification.NotificationType;
+import com.tourguide.route.IRouteService;
+import com.tourguide.route.dto.RouteResponse;
 import com.tourguide.user.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +28,11 @@ public class UserService implements IUserService {
 
     private final UserRepository userRepository;
     private final FavoriteRepository favoriteRepository;
+    private final LocationHistoryRepository locationHistoryRepository;
     private final UserMapper userMapper;
     private final MinioUtil minioUtil;
+    private final IRouteService routeService;
+    private final NotificationService notificationService;
 
     private static final String PROFILE_PHOTOS_BUCKET = "profile-photos";
 
@@ -185,5 +192,31 @@ public class UserService implements IUserService {
     @Override
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    @Transactional
+    public void updateLocation(UUID userId, LocationUpdateRequest request) {
+        LocationHistory history = LocationHistory.builder()
+                .userId(userId)
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .build();
+        locationHistoryRepository.save(history);
+
+        try {
+            List<RouteResponse> nearbyRoutes = routeService.findNearbyRoutes(request.getLatitude(), request.getLongitude());
+            if (!nearbyRoutes.isEmpty()) {
+                RouteResponse route = nearbyRoutes.get(0);
+                notificationService.sendNotification(
+                        userId,
+                        NotificationType.ROUTE_NEARBY,
+                        "Yeni Route",
+                        "Tamamlayabileceginiz bir route var: " + route.getName()
+                );
+                log.info("Route nearby notification sent to user {} for route: {}", userId, route.getName());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to check nearby routes for user {}: {}", userId, e.getMessage());
+        }
     }
 }

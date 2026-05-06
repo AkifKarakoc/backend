@@ -11,6 +11,8 @@ public interface IPlaceService {
 
     List<PlaceResponse> findNearby(double lat, double lng, Integer radius, Integer limit, UUID userId);
 
+    List<PlaceResponse> findNearby(double lat, double lng, Integer radius, Integer limit, String category, UUID userId);
+
     PlaceDetailResponse findById(UUID placeId, UUID userId);
 
     List<PlaceResponse> search(String query, UUID userId);

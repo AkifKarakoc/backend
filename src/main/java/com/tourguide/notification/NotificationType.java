@@ -6,5 +6,6 @@ public enum NotificationType {
     REVIEW_APPROVED,
     REVIEW_REJECTED,
     LEVEL_UP,
-    SYSTEM
+    SYSTEM,
+    ROUTE_NEARBY
 }

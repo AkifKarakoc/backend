@@ -23,6 +23,7 @@ public class RouteResponse {
     private Integer expReward;
     private String thumbnailUrl;
     private Integer totalStops;
+    private Double distance;
     private List<RoutePlaceResponse> places;
 
     @Getter

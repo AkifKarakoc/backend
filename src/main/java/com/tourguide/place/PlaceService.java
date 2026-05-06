@@ -36,11 +36,17 @@ public class PlaceService implements IPlaceService {
     @SuppressWarnings("unchecked")
     @Transactional(readOnly = true)
     public List<PlaceResponse> findNearby(double lat, double lng, Integer radius, Integer limit, UUID userId) {
+        return findNearby(lat, lng, radius, limit, null, userId);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Transactional(readOnly = true)
+    public List<PlaceResponse> findNearby(double lat, double lng, Integer radius, Integer limit, String category, UUID userId) {
         int searchRadius = radius != null ? radius : DEFAULT_RADIUS;
         int searchLimit = limit != null ? limit : DEFAULT_LIMIT;
 
         String geohash = GeohashUtil.encode(lat, lng);
-        String cacheKey = CACHE_PREFIX + geohash + ":" + searchRadius;
+        String cacheKey = CACHE_PREFIX + geohash + ":" + searchRadius + ":" + (category != null ? category : "all");
 
         // Check cache
         List<PlaceResponse> cached = (List<PlaceResponse>) redisTemplate.opsForValue().get(cacheKey);
@@ -52,7 +58,12 @@ public class PlaceService implements IPlaceService {
             return cached;
         }
 
-        List<Place> places = placeRepository.findNearby(lat, lng, searchRadius, searchLimit);
+        List<Place> places;
+        if (category != null && !category.isEmpty()) {
+            places = placeRepository.findNearbyByCategory(lat, lng, searchRadius, searchLimit, category);
+        } else {
+            places = placeRepository.findNearby(lat, lng, searchRadius, searchLimit);
+        }
 
         List<PlaceResponse> responses = places.stream()
                 .map(place -> {

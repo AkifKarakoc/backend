@@ -2,6 +2,7 @@ package com.tourguide.user;
 
 import com.tourguide.user.dto.AddFavoriteRequest;
 import com.tourguide.user.dto.FavoriteResponse;
+import com.tourguide.user.dto.LocationUpdateRequest;
 import com.tourguide.user.dto.UpdateUserRequest;
 import com.tourguide.user.dto.UserResponse;
 import com.tourguide.common.enums.Role;
@@ -42,4 +43,6 @@ public interface IUserService {
     Optional<User> findByEmailActive(String email);
 
     boolean existsByEmail(String email);
+
+    void updateLocation(UUID userId, LocationUpdateRequest request);
 }

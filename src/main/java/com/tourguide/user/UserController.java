@@ -58,4 +58,12 @@ public class UserController {
         userService.removeFavorite(userId, id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/me/location")
+    public ResponseEntity<Void> updateLocation(
+            @AuthenticationPrincipal UUID userId,
+            @RequestBody LocationUpdateRequest request) {
+        userService.updateLocation(userId, request);
+        return ResponseEntity.ok().build();
+    }
 }

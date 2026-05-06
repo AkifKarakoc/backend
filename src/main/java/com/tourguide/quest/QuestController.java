@@ -48,4 +48,9 @@ public class QuestController {
             @RequestParam Double longitude) {
         return ResponseEntity.ok(questService.verifyStep(userId, id, stepId, photo, latitude, longitude));
     }
+
+    @GetMapping("/user/quests")
+    public ResponseEntity<List<UserQuestResponse>> getUserQuests(@AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(questService.getUserQuests(userId));
+    }
 }

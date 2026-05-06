@@ -202,6 +202,54 @@ public class QuestService implements IQuestService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public List<UserQuestResponse> getUserQuests(UUID userId) {
+        List<UserQuest> userQuests = userQuestRepository.findByUserId(userId);
+
+        return userQuests.stream()
+                .map(userQuest -> {
+                    Quest quest = questRepository.findById(userQuest.getQuestId()).orElse(null);
+
+                    String title = null;
+                    String description = null;
+                    String thumbnailUrl = null;
+                    int totalSteps = 0;
+
+                    if (quest != null) {
+                        title = quest.getTitle();
+                        description = quest.getDescription();
+                        thumbnailUrl = quest.getThumbnailUrl();
+                        totalSteps = quest.getSteps().size();
+                    }
+
+                    int completedSteps = 0;
+                    if (userQuest.getStatus() == QuestStatus.COMPLETED) {
+                        completedSteps = totalSteps;
+                    } else {
+                        List<QuestVerification> verifications = verificationRepository.findByUserQuestId(userQuest.getId());
+                        completedSteps = (int) verifications.stream()
+                                .filter(v -> v.getStatus() == VerificationStatus.APPROVED)
+                                .map(QuestVerification::getStepId)
+                                .distinct()
+                                .count();
+                    }
+
+                    return UserQuestResponse.builder()
+                            .id(userQuest.getId())
+                            .questId(userQuest.getQuestId())
+                            .questTitle(title)
+                            .questDescription(description)
+                            .questThumbnailUrl(thumbnailUrl)
+                            .status(userQuest.getStatus().name())
+                            .startedAt(userQuest.getStartedAt())
+                            .completedAt(userQuest.getCompletedAt())
+                            .totalSteps(totalSteps)
+                            .completedSteps(completedSteps)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
     private boolean checkQuestCompletion(UserQuest userQuest, UUID questId, UUID userId) {
         List<QuestStep> allSteps = questStepRepository.findByQuestIdOrderByStepOrder(questId);
         List<QuestVerification> verifications = verificationRepository.findByUserQuestId(userQuest.getId());

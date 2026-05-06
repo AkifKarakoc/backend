@@ -15,6 +15,8 @@ public interface UserQuestRepository extends JpaRepository<UserQuest, UUID> {
 
     Optional<UserQuest> findByUserIdAndQuestId(UUID userId, UUID questId);
 
+    List<UserQuest> findByUserId(UUID userId);
+
     boolean existsByUserIdAndQuestId(UUID userId, UUID questId);
 
     // ── Dashboard aggregate queries ──

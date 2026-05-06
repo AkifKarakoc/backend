@@ -27,8 +27,9 @@ public class PlaceController {
             @RequestParam double longitude,
             @RequestParam(required = false) Integer radius,
             @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String category,
             @AuthenticationPrincipal UUID userId) {
-        return ResponseEntity.ok(placeService.findNearby(latitude, longitude, radius, limit, userId));
+        return ResponseEntity.ok(placeService.findNearby(latitude, longitude, radius, limit, category, userId));
     }
 
     @GetMapping("/{id}")

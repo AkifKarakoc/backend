@@ -1,9 +1,10 @@
 package com.tourguide.route;
 
-import com.tourguide.route.dto.RouteDetailResponse;
-import com.tourguide.route.dto.RouteResponse;
+import com.tourguide.route.dto.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,5 +27,25 @@ public class RouteController {
     @GetMapping("/{id}")
     public ResponseEntity<RouteDetailResponse> getRouteDetail(@PathVariable UUID id) {
         return ResponseEntity.ok(routeService.findById(id));
+    }
+
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<AcceptRouteResponse> acceptRoute(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable UUID id) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(routeService.acceptRoute(userId, id));
+    }
+
+    @GetMapping("/user/routes")
+    public ResponseEntity<List<UserRouteResponse>> getUserRoutes(
+            @AuthenticationPrincipal UUID userId) {
+        return ResponseEntity.ok(routeService.getUserRoutes(userId));
+    }
+
+    @GetMapping("/nearby")
+    public ResponseEntity<List<RouteResponse>> getNearbyRoutes(
+            @RequestParam double latitude,
+            @RequestParam double longitude) {
+        return ResponseEntity.ok(routeService.findNearbyRoutes(latitude, longitude));
     }
 }
