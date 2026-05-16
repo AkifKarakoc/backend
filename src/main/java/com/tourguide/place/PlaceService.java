@@ -1,19 +1,26 @@
 package com.tourguide.place;
 
+import com.tourguide.admin.contenteditor.dto.PlaceImageResponse;
 import com.tourguide.common.exception.ResourceNotFoundException;
 import com.tourguide.common.util.CoordinateUtil;
 import com.tourguide.common.util.GeohashUtil;
+import com.tourguide.common.util.MinioUtil;
 import com.tourguide.admin.contenteditor.dto.PlaceMapPointResponse;
 import com.tourguide.place.dto.PlaceDetailResponse;
 import com.tourguide.place.dto.PlaceResponse;
+import com.tourguide.review.ReviewRepository;
+import com.tourguide.review.ReviewStatus;
 import com.tourguide.user.IUserService;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -27,11 +34,17 @@ public class PlaceService implements IPlaceService {
     private final IUserService userService;
     private final PlaceMapper placeMapper;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ReviewRepository reviewRepository;
+    private final MinioUtil minioUtil;
 
     private static final String CACHE_PREFIX = "query:geohash:";
+    private static final String PLACE_DETAIL_CACHE_PREFIX = "place:detail:";
+    private static final int GEOHASH_PREFIX_LEN = 5;
     private static final long CACHE_TTL = 3600;
+    private static final long PLACE_DETAIL_CACHE_TTL = 1800;
     private static final int DEFAULT_RADIUS = 5000;
     private static final int DEFAULT_LIMIT = 20;
+    private static final String PLACE_IMAGES_BUCKET = "place-images";
 
     @SuppressWarnings("unchecked")
     @Transactional(readOnly = true)
@@ -46,12 +59,13 @@ public class PlaceService implements IPlaceService {
         int searchLimit = limit != null ? limit : DEFAULT_LIMIT;
 
         String geohash = GeohashUtil.encode(lat, lng);
-        String cacheKey = CACHE_PREFIX + geohash + ":" + searchRadius + ":" + (category != null ? category : "all");
+        String geohashPrefix = geohash.length() > GEOHASH_PREFIX_LEN
+                ? geohash.substring(0, GEOHASH_PREFIX_LEN)
+                : geohash;
+        String cacheKey = CACHE_PREFIX + geohashPrefix + ":" + searchRadius + ":" + (category != null ? category : "all") + ":" + searchLimit;
 
-        // Check cache
         List<PlaceResponse> cached = (List<PlaceResponse>) redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
-            // Enrich with favorite status for current user
             if (userId != null) {
                 cached.forEach(p -> p.setIsFavorited(userService.isFavorited(userId, p.getId())));
             }
@@ -72,11 +86,11 @@ public class PlaceService implements IPlaceService {
                     if (userId != null) {
                         response.setIsFavorited(userService.isFavorited(userId, place.getId()));
                     }
+                    convertImageUrlsToPresigned(response.getImages());
                     return response;
                 })
                 .collect(Collectors.toList());
 
-        // Cache without favorite status
         try {
             redisTemplate.opsForValue().set(cacheKey, responses, CACHE_TTL, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -88,13 +102,49 @@ public class PlaceService implements IPlaceService {
 
     @Transactional(readOnly = true)
     public PlaceDetailResponse findById(UUID placeId, UUID userId) {
+        String cacheKey = PLACE_DETAIL_CACHE_PREFIX + placeId.toString();
+        PlaceDetailResponse cached = (PlaceDetailResponse) redisTemplate.opsForValue().get(cacheKey);
+        if (cached != null) {
+            if (userId != null) {
+                cached.setIsFavorited(userService.isFavorited(userId, placeId));
+            }
+            Map<Integer, Integer> distribution = new HashMap<>();
+            for (int i = 1; i <= 5; i++) distribution.put(i, 0);
+            List<Object[]> rows = reviewRepository.countRatingDistributionByPlaceId(placeId);
+            for (Object[] row : rows) {
+                distribution.put(((Number) row[0]).intValue(), ((Long) row[1]).intValue());
+            }
+            cached.setRatingDistribution(distribution);
+            return cached;
+        }
+
         Place place = placeRepository.findByIdAndIsActiveTrue(placeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Place", "id", placeId));
 
+        place.getImages().size();
+
         PlaceDetailResponse response = placeMapper.toDetailResponse(place);
+
+        try {
+            redisTemplate.opsForValue().set(cacheKey, response, PLACE_DETAIL_CACHE_TTL, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Failed to cache place detail: {}", e.getMessage());
+        }
+
+        convertImageUrlsToPresigned(response.getImages());
+
         if (userId != null) {
             response.setIsFavorited(userService.isFavorited(userId, placeId));
         }
+
+        Map<Integer, Integer> distribution = new HashMap<>();
+        for (int i = 1; i <= 5; i++) distribution.put(i, 0);
+        List<Object[]> rows = reviewRepository.countRatingDistributionByPlaceId(placeId);
+        for (Object[] row : rows) {
+            distribution.put(((Number) row[0]).intValue(), ((Long) row[1]).intValue());
+        }
+        response.setRatingDistribution(distribution);
+
         return response;
     }
 
@@ -108,9 +158,18 @@ public class PlaceService implements IPlaceService {
                     if (userId != null) {
                         response.setIsFavorited(userService.isFavorited(userId, place.getId()));
                     }
+                    convertImageUrlsToPresigned(response.getImages());
                     return response;
                 })
                 .collect(Collectors.toList());
+    }
+
+    private void convertImageUrlsToPresigned(List<PlaceImageResponse> images) {
+        if (images == null) return;
+        for (PlaceImageResponse image : images) {
+            String presignedUrl = minioUtil.getPresignedUrl(PLACE_IMAGES_BUCKET, image.getImageUrl());
+            image.setImageUrl(presignedUrl);
+        }
     }
 
             @Override
@@ -140,13 +199,17 @@ public class PlaceService implements IPlaceService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "query:geohash", allEntries = true)
     public Place createPlace(Place place) {
         return placeRepository.save(place);
     }
 
     @Override
     @Transactional
+    @CacheEvict(value = "query:geohash", allEntries = true)
     public Place updatePlace(UUID placeId, Place updates) {
+        redisTemplate.delete(PLACE_DETAIL_CACHE_PREFIX + placeId.toString());
+
         Place existing = placeRepository.findByIdAndIsActiveTrue(placeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Place", "id", placeId));
 
@@ -198,7 +261,10 @@ public class PlaceService implements IPlaceService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "query:geohash", allEntries = true)
     public void softDeletePlace(UUID placeId) {
+        redisTemplate.delete(PLACE_DETAIL_CACHE_PREFIX + placeId.toString());
+
         Place place = placeRepository.findByIdAndIsActiveTrue(placeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Place", "id", placeId));
         place.setIsActive(false);
@@ -207,7 +273,10 @@ public class PlaceService implements IPlaceService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "query:geohash", allEntries = true)
     public void updateRating(UUID placeId, double avgRating, int reviewCount) {
+        redisTemplate.delete(PLACE_DETAIL_CACHE_PREFIX + placeId.toString());
+
         Place place = placeRepository.findById(placeId).orElse(null);
         if (place == null) {
             return;

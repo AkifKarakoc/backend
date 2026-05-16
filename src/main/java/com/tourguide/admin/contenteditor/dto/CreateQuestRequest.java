@@ -20,6 +20,7 @@ public class CreateQuestRequest {
 
     private String description;
     private Integer expReward;
+    private Integer gpsThresholdMeters;
     private String region;
     private String thumbnailUrl;
     private UUID badgeId;

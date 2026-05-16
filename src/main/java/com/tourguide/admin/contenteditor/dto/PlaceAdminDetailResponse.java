@@ -24,6 +24,7 @@ public class PlaceAdminDetailResponse {
     private String website;
     private String openingHours;
     private String photoUrl;
+    private List<PlaceImageResponse> images;
     private Integer popularityScore;
     private List<String> keywords;
     private Boolean isActive;

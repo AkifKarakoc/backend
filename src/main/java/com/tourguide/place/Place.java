@@ -2,6 +2,7 @@ package com.tourguide.place;
 
 import com.tourguide.common.entity.BaseEntity;
 import com.tourguide.common.util.StringListConverter;
+import com.tourguide.image.PlaceImage;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -66,6 +67,10 @@ public class Place extends BaseEntity {
 
     @Column(name = "photo_url", length = 500)
     private String photoUrl;
+
+    @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<PlaceImage> images = new ArrayList<>();
 
     @Column(name = "popularity_score")
     @Builder.Default

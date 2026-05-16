@@ -20,6 +20,8 @@ public class RouteDetailResponse {
     private Integer estimatedMinutes;
     private Integer expReward;
     private String thumbnailUrl;
+    private Integer gpsThresholdMeters;
+    private String userStatus;
     private List<RoutePlaceResponse> places;
 
     @Getter
@@ -33,5 +35,9 @@ public class RouteDetailResponse {
         private Integer stopOrder;
         private Integer estimatedMinutes;
         private String notes;
+        private Double latitude;
+        private Double longitude;
+        private String placeName;
+        private boolean completed;
     }
 }

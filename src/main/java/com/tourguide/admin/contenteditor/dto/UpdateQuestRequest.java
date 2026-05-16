@@ -17,6 +17,7 @@ public class UpdateQuestRequest {
     private String title;
     private String description;
     private Integer expReward;
+    private Integer gpsThresholdMeters;
     private String region;
     private String thumbnailUrl;
     private UUID badgeId;

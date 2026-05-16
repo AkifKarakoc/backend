@@ -22,6 +22,7 @@ public class RouteResponse {
     private Integer estimatedMinutes;
     private Integer expReward;
     private String thumbnailUrl;
+    private Integer gpsThresholdMeters;
     private Integer totalStops;
     private Double distance;
     private List<RoutePlaceResponse> places;

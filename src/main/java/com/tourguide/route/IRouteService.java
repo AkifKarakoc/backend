@@ -9,7 +9,7 @@ public interface IRouteService {
 
     List<RouteResponse> findAll(Double latitude, Double longitude);
 
-    RouteDetailResponse findById(UUID routeId);
+    RouteDetailResponse findById(UUID userId, UUID routeId);
 
     Route createRoute(Route route, List<RoutePlace> places);
 
@@ -20,4 +20,6 @@ public interface IRouteService {
     List<UserRouteResponse> getUserRoutes(UUID userId);
 
     List<RouteResponse> findNearbyRoutes(double latitude, double longitude);
+
+    CompleteRouteStopResponse completeRouteStop(UUID userId, UUID routeId, UUID routePlaceId, double latitude, double longitude);
 }

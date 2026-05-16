@@ -52,14 +52,17 @@ public class UserService implements IUserService {
         if (request.getLastName() != null) {
             user.setLastName(request.getLastName());
         }
+        if (request.getPhoneCountryCode() != null) {
+            user.setPhoneCountryCode(request.getPhoneCountryCode());
+        }
         if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
         }
         if (request.getPreferredLanguage() != null) {
             user.setPreferredLanguage(request.getPreferredLanguage());
         }
-        if (request.getAgeGroup() != null) {
-            user.setAgeGroup(request.getAgeGroup());
+        if (request.getBirthDate() != null) {
+            user.setBirthDate(request.getBirthDate());
         }
 
         user = userRepository.save(user);
@@ -76,7 +79,9 @@ public class UserService implements IUserService {
         }
 
         String fileName = minioUtil.upload(PROFILE_PHOTOS_BUCKET, file);
-        user.setProfilePhotoUrl(fileName);
+        String presignedUrl = minioUtil.getPresignedUrl(PROFILE_PHOTOS_BUCKET, fileName);
+        
+        user.setProfilePhotoUrl(presignedUrl);
         user = userRepository.save(user);
 
         return userMapper.toResponse(user);
@@ -130,12 +135,42 @@ public class UserService implements IUserService {
         User user = findActiveUser(userId);
         user.setExpPoints(user.getExpPoints() + points);
 
-        // Level calculation: every 100 EXP = 1 level
-        int newLevel = (user.getExpPoints() / 100) + 1;
+        // Tiered level calculation
+        int newLevel = calculateLevel(user.getExpPoints());
         user.setLevel(newLevel);
 
         userRepository.save(user);
         log.info("User {} gained {} EXP, now at level {}", userId, points, newLevel);
+    }
+
+    /**
+     * Calculates user level based on total EXP points using a tiered system.
+     * Tiers:
+     * - Level 1-4: 100 EXP per level (Beginner)
+     * - Level 5-9: 200 EXP per level (Local Guide)
+     * - Level 10-14: 350 EXP per level (Explorer)
+     * - Level 15+: 500 EXP per level (Ambassador)
+     */
+    private int calculateLevel(int expPoints) {
+        int level = 1;
+        int remainingExp = expPoints;
+        
+        while (remainingExp >= getRequiredExpForLevel(level)) {
+            remainingExp -= getRequiredExpForLevel(level);
+            level++;
+        }
+        
+        return level;
+    }
+
+    /**
+     * Returns the EXP required to advance from the given level to the next.
+     */
+    private int getRequiredExpForLevel(int level) {
+        if (level <= 4) return 100;
+        if (level <= 9) return 200;
+        if (level <= 14) return 350;
+        return 500;
     }
 
     @Transactional(readOnly = true)

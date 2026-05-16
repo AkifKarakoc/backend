@@ -6,7 +6,9 @@ import com.tourguide.common.util.CoordinateUtil;
 import com.tourguide.place.Place;
 import com.tourguide.place.PlaceRepository;
 import com.tourguide.route.dto.*;
+import com.tourguide.user.IUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,6 +29,8 @@ public class RouteService implements IRouteService {
     private final RoutePlaceRepository routePlaceRepository;
     private final PlaceRepository placeRepository;
     private final UserRouteRepository userRouteRepository;
+    private final UserRouteStopRepository userRouteStopRepository;
+    private final ObjectProvider<IUserService> userServiceProvider;
 
     @Transactional(readOnly = true)
     public List<RouteResponse> findAll(Double latitude, Double longitude) {
@@ -48,6 +53,7 @@ public class RouteService implements IRouteService {
                 .estimatedMinutes(route.getEstimatedMinutes())
                 .expReward(route.getExpReward())
                 .thumbnailUrl(route.getThumbnailUrl())
+                .gpsThresholdMeters(route.getGpsThresholdMeters())
                 .totalStops(route.getRoutePlaces().size())
                 .places(route.getRoutePlaces().stream()
                         .sorted(Comparator.comparing(RoutePlace::getStopOrder))
@@ -63,19 +69,46 @@ public class RouteService implements IRouteService {
     }
 
     @Transactional(readOnly = true)
-    public RouteDetailResponse findById(UUID routeId) {
+    public RouteDetailResponse findById(UUID userId, UUID routeId) {
         Route route = routeRepository.findByIdAndIsActiveTrue(routeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Route", "id", routeId));
 
-        List<RouteDetailResponse.RoutePlaceResponse> places = routePlaceRepository
-                .findByRouteIdOrderByStopOrder(routeId).stream()
-                .map(rp -> RouteDetailResponse.RoutePlaceResponse.builder()
-                .id(rp.getId())
-                .placeId(rp.getPlaceId())
-                .stopOrder(rp.getStopOrder())
-                .estimatedMinutes(rp.getEstimatedMinutes())
-                .notes(rp.getNotes())
-                .build())
+        List<RoutePlace> routePlaces = routePlaceRepository
+                .findByRouteIdOrderByStopOrder(routeId);
+
+        List<UUID> placeIds = routePlaces.stream()
+                .map(RoutePlace::getPlaceId)
+                .collect(Collectors.toList());
+
+        List<Place> places = placeRepository.findAllById(placeIds);
+        java.util.Map<UUID, Place> placeMap = places.stream()
+                .collect(java.util.stream.Collectors.toMap(Place::getId, p -> p));
+
+        Optional<UserRoute> userRouteOpt = userRouteRepository.findByUserIdAndRouteId(userId, routeId);
+        
+        List<UserRouteStop> completedStops = List.of();
+        if (userRouteOpt.isPresent()) {
+            completedStops = userRouteStopRepository.findByUserRouteId(userRouteOpt.get().getId());
+        }
+        final List<UserRouteStop> finalCompletedStops = completedStops;
+
+        List<RouteDetailResponse.RoutePlaceResponse> placesResponse = routePlaces.stream()
+                .map(rp -> {
+                    Place place = placeMap.get(rp.getPlaceId());
+                    boolean completed = finalCompletedStops.stream()
+                            .anyMatch(s -> s.getRoutePlaceId().equals(rp.getId()));
+                    return RouteDetailResponse.RoutePlaceResponse.builder()
+                            .id(rp.getId())
+                            .placeId(rp.getPlaceId())
+                            .stopOrder(rp.getStopOrder())
+                            .estimatedMinutes(rp.getEstimatedMinutes())
+                            .notes(rp.getNotes())
+                            .latitude(place != null ? place.getLatitude() : null)
+                            .longitude(place != null ? place.getLongitude() : null)
+                            .placeName(place != null ? place.getName() : null)
+                            .completed(completed)
+                            .build();
+                })
                 .collect(Collectors.toList());
 
         return RouteDetailResponse.builder()
@@ -88,7 +121,9 @@ public class RouteService implements IRouteService {
                 .estimatedMinutes(route.getEstimatedMinutes())
                 .expReward(route.getExpReward())
                 .thumbnailUrl(route.getThumbnailUrl())
-                .places(places)
+                .gpsThresholdMeters(route.getGpsThresholdMeters())
+                .userStatus(userRouteOpt.map(ur -> ur.getStatus().name()).orElse(null))
+                .places(placesResponse)
                 .build();
     }
 
@@ -203,6 +238,7 @@ public class RouteService implements IRouteService {
                             .estimatedMinutes(route.getEstimatedMinutes())
                             .expReward(route.getExpReward())
                             .thumbnailUrl(route.getThumbnailUrl())
+                            .gpsThresholdMeters(route.getGpsThresholdMeters())
                             .totalStops(route.getRoutePlaces().size())
                             .distance(distance)
                             .places(route.getRoutePlaces().stream()
@@ -259,5 +295,82 @@ public class RouteService implements IRouteService {
                     .collect(Collectors.toList());
             throw new IllegalArgumentException("Place IDs not found: " + missingPlaceIds);
         }
+    }
+
+    @Transactional
+    public CompleteRouteStopResponse completeRouteStop(UUID userId, UUID routeId, UUID routePlaceId, double latitude, double longitude) {
+        UserRoute userRoute = userRouteRepository.findByUserIdAndRouteId(userId, routeId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserRoute not found"));
+
+        if (userRoute.getStatus() != RouteStatus.IN_PROGRESS) {
+            throw new IllegalArgumentException("Route is not in progress");
+        }
+
+        RoutePlace routePlace = routePlaceRepository.findById(routePlaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("RoutePlace", "id", routePlaceId));
+
+        if (!routePlace.getRoute().getId().equals(routeId)) {
+            throw new IllegalArgumentException("RoutePlace does not belong to this route");
+        }
+
+        if (userRouteStopRepository.existsByUserRouteIdAndRoutePlaceId(userRoute.getId(), routePlaceId)) {
+            throw new DuplicateResourceException("Stop already completed");
+        }
+
+        Place place = placeRepository.findById(routePlace.getPlaceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Place", "id", routePlace.getPlaceId()));
+
+        Route route = routeRepository.findById(routeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Route", "id", routeId));
+
+        double gpsThreshold = route.getGpsThresholdMeters();
+        double distance = CoordinateUtil.haversineDistance(latitude, longitude, place.getLatitude(), place.getLongitude());
+        if (distance > gpsThreshold) {
+            throw new com.tourguide.common.exception.GpsCheckFailedException(distance, gpsThreshold);
+        }
+
+        int expEarned = 5;
+
+        UserRouteStop userRouteStop = UserRouteStop.builder()
+                .userRouteId(userRoute.getId())
+                .routePlaceId(routePlaceId)
+                .userId(userId)
+                .latitude(latitude)
+                .longitude(longitude)
+                .completedAt(LocalDateTime.now())
+                .expEarned(expEarned)
+                .build();
+
+        userRouteStopRepository.save(userRouteStop);
+
+        userServiceProvider.getObject().addExp(userId, expEarned);
+
+        boolean routeCompleted = checkRouteCompletion(userRoute, routeId, userId);
+
+        return CompleteRouteStopResponse.builder()
+                .stopId(routePlaceId.toString())
+                .routeCompleted(routeCompleted)
+                .expEarned(expEarned)
+                .distance(distance)
+                .build();
+    }
+
+    private boolean checkRouteCompletion(UserRoute userRoute, UUID routeId, UUID userId) {
+        List<RoutePlace> allStops = routePlaceRepository.findByRouteIdOrderByStopOrder(routeId);
+        long completedCount = userRouteStopRepository.countByUserRouteId(userRoute.getId());
+
+        if (completedCount >= allStops.size()) {
+            userRoute.setStatus(RouteStatus.COMPLETED);
+            userRoute.setCompletedAt(LocalDateTime.now());
+            userRouteRepository.save(userRoute);
+
+            Route route = routeRepository.findById(routeId).orElse(null);
+            if (route != null) {
+                userServiceProvider.getObject().addExp(userId, route.getExpReward());
+            }
+
+            return true;
+        }
+        return false;
     }
 }

@@ -1,5 +1,6 @@
 package com.tourguide.image;
 
+import com.tourguide.place.Place;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,10 +21,11 @@ public class PlaceImage {
     @Column(updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "place_id", nullable = false)
-    private UUID placeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "place_id", nullable = false)
+    private Place place;
 
-    @Column(name = "image_url", nullable = false, length = 500)
+    @Column(name = "image_url", nullable = false, columnDefinition = "text")
     private String imageUrl;
 
     @Column(name = "uploaded_by")

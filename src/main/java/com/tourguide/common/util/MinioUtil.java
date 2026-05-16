@@ -43,27 +43,39 @@ public class MinioUtil {
         }
     }
 
-    public void delete(String bucket, String fileName) {
+    public void delete(String bucket, String fileNameOrUrl) {
         try {
+            // Extract file name from URL if a full URL is provided
+            String objectName = fileNameOrUrl;
+            if (fileNameOrUrl.contains("/")) {
+                objectName = fileNameOrUrl.substring(fileNameOrUrl.lastIndexOf('/') + 1);
+                // Remove query parameters if present (presigned URLs have ?signature=...)
+                if (objectName.contains("?")) {
+                    objectName = objectName.substring(0, objectName.indexOf('?'));
+                }
+            }
+            
             minioClient.removeObject(RemoveObjectArgs.builder()
                     .bucket(bucket)
-                    .object(fileName)
+                    .object(objectName)
                     .build());
-            log.info("Deleted file {} from bucket {}", fileName, bucket);
+            log.info("Deleted file {} from bucket {}", objectName, bucket);
         } catch (Exception e) {
-            log.warn("Failed to delete file {} from bucket {}: {}", fileName, bucket, e.getMessage());
+            log.warn("Failed to delete file {} from bucket {}: {}", fileNameOrUrl, bucket, e.getMessage());
         }
     }
 
     public String getPresignedUrl(String bucket, String fileName) {
         try {
+            // MinIO allows maximum 7 days for presigned URLs
             return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
                     .method(Method.GET)
                     .bucket(bucket)
                     .object(fileName)
-                    .expiry(1, TimeUnit.HOURS)
+                    .expiry(7, TimeUnit.DAYS)
                     .build());
         } catch (Exception e) {
+            log.error("Failed to generate presigned URL for {}/{}: {}", bucket, fileName, e.getMessage(), e);
             throw new RuntimeException("Failed to generate presigned URL", e);
         }
     }

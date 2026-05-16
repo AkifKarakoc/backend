@@ -13,6 +13,8 @@ import java.util.UUID;
 public class ReviewResponse {
     private UUID id;
     private UUID userId;
+    private String userFirstName;
+    private String userLastName;
     private UUID placeId;
     private Integer rating;
     private String comment;

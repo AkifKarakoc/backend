@@ -2,6 +2,7 @@ package com.tourguide.user.dto;
 
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Getter
@@ -14,10 +15,11 @@ public class UserResponse {
     private String email;
     private String firstName;
     private String lastName;
+    private String phoneCountryCode;
     private String phoneNumber;
     private String profilePhotoUrl;
     private String preferredLanguage;
-    private String ageGroup;
+    private LocalDate birthDate;
     private String role;
     private Integer expPoints;
     private Integer level;

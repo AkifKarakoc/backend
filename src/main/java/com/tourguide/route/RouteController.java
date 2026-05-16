@@ -25,8 +25,10 @@ public class RouteController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<RouteDetailResponse> getRouteDetail(@PathVariable UUID id) {
-        return ResponseEntity.ok(routeService.findById(id));
+    public ResponseEntity<RouteDetailResponse> getRouteDetail(
+            @AuthenticationPrincipal UUID userId,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(routeService.findById(userId, id));
     }
 
     @PostMapping("/{id}/accept")
@@ -34,12 +36,6 @@ public class RouteController {
             @AuthenticationPrincipal UUID userId,
             @PathVariable UUID id) {
         return ResponseEntity.status(HttpStatus.CREATED).body(routeService.acceptRoute(userId, id));
-    }
-
-    @GetMapping("/user/routes")
-    public ResponseEntity<List<UserRouteResponse>> getUserRoutes(
-            @AuthenticationPrincipal UUID userId) {
-        return ResponseEntity.ok(routeService.getUserRoutes(userId));
     }
 
     @GetMapping("/nearby")

@@ -31,7 +31,6 @@ public class UpdatePlaceRequest {
     private Double latitude;
     private Double longitude;
 
-    @Size(max = 2000, message = "Description must not exceed 2000 characters")
     private String description;
 
     @Size(max = 500, message = "Address must not exceed 500 characters")
@@ -48,6 +47,8 @@ public class UpdatePlaceRequest {
 
     @Size(max = 500, message = "Photo URL must not exceed 500 characters")
     private String photoUrl;
+
+    private List<String> photoUrls;
 
     @Min(value = 1, message = "Popularity score must be at least 1")
     @Max(value = 100, message = "Popularity score must be at most 100")

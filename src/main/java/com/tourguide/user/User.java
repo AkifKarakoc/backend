@@ -5,6 +5,8 @@ import com.tourguide.common.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -26,6 +28,9 @@ public class User extends BaseEntity {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
+    @Column(name = "phone_country_code", length = 5)
+    private String phoneCountryCode;
+
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
@@ -36,8 +41,8 @@ public class User extends BaseEntity {
     @Builder.Default
     private String preferredLanguage = "tr";
 
-    @Column(name = "age_group", length = 20)
-    private String ageGroup;
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

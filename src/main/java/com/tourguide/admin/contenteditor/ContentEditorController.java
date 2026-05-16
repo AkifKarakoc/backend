@@ -2,6 +2,7 @@ package com.tourguide.admin.contenteditor;
 
 import com.tourguide.admin.contenteditor.dto.*;
 import com.tourguide.badge.Badge;
+import com.tourguide.common.util.MinioUtil;
 import com.tourguide.place.Place;
 import com.tourguide.place.dto.PlaceResponse;
 import com.tourguide.quest.Quest;
@@ -10,10 +11,13 @@ import com.tourguide.route.dto.RouteResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,6 +27,9 @@ import java.util.stream.Collectors;
 public class ContentEditorController {
 
     private final ContentEditorService contentEditorService;
+    private final MinioUtil minioUtil;
+
+    private static final String PLACE_IMAGES_BUCKET = "place-images";
 
     @GetMapping("/places")
     public ResponseEntity<List<PlaceAdminListItemResponse>> getPlaces() {
@@ -54,6 +61,23 @@ public class ContentEditorController {
     @DeleteMapping("/places/{id}")
     public ResponseEntity<Void> deletePlace(@PathVariable UUID id) {
         contentEditorService.deletePlace(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/places/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PlaceImageResponse> uploadPlacePhoto(
+            @PathVariable UUID id,
+            @RequestParam("photo") MultipartFile photo) {
+        String imageUrl = minioUtil.upload(PLACE_IMAGES_BUCKET, photo);
+        PlaceImageResponse response = contentEditorService.addPlacePhoto(id, imageUrl);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @DeleteMapping("/places/{placeId}/photos/{photoId}")
+    public ResponseEntity<Void> deletePlacePhoto(
+            @PathVariable UUID placeId,
+            @PathVariable UUID photoId) {
+        contentEditorService.deletePlacePhoto(placeId, photoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -133,6 +157,17 @@ public class ContentEditorController {
 
     // --- Helper methods ---
     private PlaceAdminResponse toPlaceResponse(Place place) {
+        List<PlaceImageResponse> imageResponses = place.getImages().stream()
+                .map(img -> {
+                    String presignedUrl = minioUtil.getPresignedUrl(PLACE_IMAGES_BUCKET, img.getImageUrl());
+                    return PlaceImageResponse.builder()
+                            .id(img.getId())
+                            .imageUrl(presignedUrl)
+                            .createdAt(img.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
         return PlaceAdminResponse.builder()
                 .id(place.getId())
                 .name(place.getName())
@@ -147,6 +182,7 @@ public class ContentEditorController {
                 .website(place.getWebsite())
                 .openingHours(place.getOpeningHours())
                 .photoUrl(place.getPhotoUrl())
+                .images(imageResponses)
                 .popularityScore(place.getPopularityScore())
                 .keywords(place.getKeywords())
                 .isActive(place.getIsActive())

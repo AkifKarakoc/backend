@@ -1,0 +1,110 @@
+# ⚠️ BU DOSYA ŞUAN KULLANILMAYACAK - İLERIDE DROPLET'E TAŞININCA KULLANILACAK
+# Production ortamı için nginx + Let's Encrypt HTTPS yapılandırması içerir.
+# Yerel geliştirme sırasında bu dosyayı kullanmayın.
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: tourguide-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tourguide}
+      POSTGRES_USER: ${POSTGRES_USER:-tourguide}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tourguide123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tourguide-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: tourguide-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - tourguide-network
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: tourguide-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - tourguide-network
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tourguide-app
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-tourguide}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-tourguide}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-tourguide123}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - tourguide-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: tourguide-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - app
+    networks:
+      - tourguide-network
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: tourguide-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - tourguide-network
+    restart: unless-stopped
+
+networks:
+  tourguide-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

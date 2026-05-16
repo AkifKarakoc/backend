@@ -5,6 +5,8 @@ import com.tourguide.common.exception.ResourceNotFoundException;
 import com.tourguide.place.IPlaceService;
 import com.tourguide.review.dto.ReviewRequest;
 import com.tourguide.review.dto.ReviewResponse;
+import com.tourguide.user.IUserService;
+import com.tourguide.user.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ public class ReviewService implements IReviewService {
 
     private final ReviewRepository reviewRepository;
     private final IPlaceService placeService;
+    private final IUserService userService;
 
     @Transactional(readOnly = true)
     public List<ReviewResponse> getReviewsForPlace(UUID placeId) {
@@ -102,9 +105,12 @@ public class ReviewService implements IReviewService {
     }
 
     private ReviewResponse toResponse(Review review) {
+        User user = userService.findActiveUser(review.getUserId());
         return ReviewResponse.builder()
                 .id(review.getId())
                 .userId(review.getUserId())
+                .userFirstName(user.getFirstName())
+                .userLastName(user.getLastName())
                 .placeId(review.getPlaceId())
                 .rating(review.getRating())
                 .comment(review.getComment())

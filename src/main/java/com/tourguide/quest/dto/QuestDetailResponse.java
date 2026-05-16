@@ -18,6 +18,7 @@ public class QuestDetailResponse {
     private String region;
     private String thumbnailUrl;
     private UUID badgeId;
+    private Integer gpsThresholdMeters;
     private List<StepResponse> steps;
     private String userStatus;
 
@@ -33,5 +34,8 @@ public class QuestDetailResponse {
         private String hint;
         private Boolean requiresPhoto;
         private Boolean isCompleted;
+        private Double latitude;
+        private Double longitude;
+        private String placeName;
     }
 }

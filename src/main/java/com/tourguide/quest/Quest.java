@@ -36,6 +36,10 @@ public class Quest extends BaseEntity {
     @Column(name = "badge_id")
     private UUID badgeId;
 
+    @Column(name = "gps_threshold_meters", nullable = false)
+    @Builder.Default
+    private Integer gpsThresholdMeters = 200;
+
     @OneToMany(mappedBy = "quest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<QuestStep> steps = new ArrayList<>();

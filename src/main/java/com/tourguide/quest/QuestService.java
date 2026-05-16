@@ -35,7 +35,6 @@ public class QuestService implements IQuestService {
     private final IPlaceService placeService;
     private final MinioUtil minioUtil;
 
-    private static final double GPS_THRESHOLD_METERS = 50.0;
     private static final String VERIFICATION_BUCKET = "quest-verifications";
 
     @Transactional(readOnly = true)
@@ -79,17 +78,41 @@ public class QuestService implements IQuestService {
         }
 
         List<QuestVerification> finalVerifications = verifications;
-        List<QuestDetailResponse.StepResponse> steps = questStepRepository.findByQuestIdOrderByStepOrder(questId).stream()
-                .map(step -> QuestDetailResponse.StepResponse.builder()
-                .id(step.getId())
-                .placeId(step.getPlaceId())
-                .stepOrder(step.getStepOrder())
-                .hint(step.getHint())
-                .requiresPhoto(step.getRequiresPhoto())
-                .isCompleted(finalVerifications.stream()
-                        .anyMatch(v -> v.getStepId().equals(step.getId())
-                        && (v.getStatus() == VerificationStatus.APPROVED)))
-                .build())
+
+        List<QuestStep> questSteps = questStepRepository.findByQuestIdOrderByStepOrder(questId);
+        List<UUID> placeIds = questSteps.stream()
+                .map(QuestStep::getPlaceId)
+                .collect(Collectors.toList());
+        List<Place> places = placeIds.stream()
+                .map(pid -> {
+                    try {
+                        return placeService.getPlaceEntity(pid);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .filter(p -> p != null)
+                .collect(Collectors.toList());
+        java.util.Map<UUID, Place> placeMap = places.stream()
+                .collect(java.util.stream.Collectors.toMap(Place::getId, p -> p));
+
+        List<QuestDetailResponse.StepResponse> steps = questSteps.stream()
+                .map(step -> {
+                    Place place = placeMap.get(step.getPlaceId());
+                    return QuestDetailResponse.StepResponse.builder()
+                            .id(step.getId())
+                            .placeId(step.getPlaceId())
+                            .stepOrder(step.getStepOrder())
+                            .hint(step.getHint())
+                            .requiresPhoto(step.getRequiresPhoto())
+                            .isCompleted(finalVerifications.stream()
+                                    .anyMatch(v -> v.getStepId().equals(step.getId())
+                                            && (v.getStatus() == VerificationStatus.APPROVED)))
+                            .latitude(place != null ? place.getLatitude() : null)
+                            .longitude(place != null ? place.getLongitude() : null)
+                            .placeName(place != null ? place.getName() : null)
+                            .build();
+                })
                 .collect(Collectors.toList());
 
         return QuestDetailResponse.builder()
@@ -100,6 +123,7 @@ public class QuestService implements IQuestService {
                 .region(quest.getRegion())
                 .thumbnailUrl(quest.getThumbnailUrl())
                 .badgeId(quest.getBadgeId())
+                .gpsThresholdMeters(quest.getGpsThresholdMeters())
                 .steps(steps)
                 .userStatus(userStatus)
                 .build();
@@ -148,9 +172,12 @@ public class QuestService implements IQuestService {
 
         // 1. GPS check
         Place place = placeService.getPlaceEntity(step.getPlaceId());
+        Quest quest = questRepository.findById(questId)
+                .orElseThrow(() -> new ResourceNotFoundException("Quest", "id", questId));
+        double gpsThreshold = quest.getGpsThresholdMeters();
         double distance = CoordinateUtil.haversineDistance(latitude, longitude, place.getLatitude(), place.getLongitude());
-        if (distance > GPS_THRESHOLD_METERS) {
-            throw new GpsCheckFailedException(distance, GPS_THRESHOLD_METERS);
+        if (distance > gpsThreshold) {
+            throw new GpsCheckFailedException(distance, gpsThreshold);
         }
 
         // 2. Upload photo

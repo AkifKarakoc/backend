@@ -31,6 +31,7 @@ public class CreateRouteRequest {
     private Double centerLongitude;
 
     private Integer radiusMeters;
+    private Integer gpsThresholdMeters;
     private Integer estimatedMinutes;
     private Integer expReward;
     private String thumbnailUrl;

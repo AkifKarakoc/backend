@@ -42,6 +42,10 @@ public class Route extends BaseEntity {
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 
+    @Column(name = "gps_threshold_meters", nullable = false)
+    @Builder.Default
+    private Integer gpsThresholdMeters = 200;
+
     @OneToMany(mappedBy = "route", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @OrderBy("stopOrder ASC")
     @Builder.Default

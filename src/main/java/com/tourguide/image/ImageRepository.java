@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface ImageRepository extends JpaRepository<PlaceImage, UUID> {
 
     List<PlaceImage> findByPlaceId(UUID placeId);
+
+    void deleteByPlaceId(UUID placeId);
 }

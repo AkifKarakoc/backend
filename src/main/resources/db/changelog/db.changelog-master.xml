@@ -22,5 +22,11 @@
     <include file="db/changelog/changes/016-add-badge-tier.xml"/>
     <include file="db/changelog/changes/017-add-places-popularity-keywords.xml"/>
     <include file="db/changelog/changes/018-create-user-routes-table.xml"/>
+    <include file="db/changelog/changes/019-add-base-entity-columns-to-user-routes.xml"/>
+    <include file="db/changelog/changes/020-create-user-route-stops-table.xml"/>
+    <include file="db/changelog/changes/021-add-gps-threshold-to-routes-and-quests.xml"/>
+    <include file="db/changelog/changes/022-replace-age-group-with-birth-date.xml"/>
+    <include file="db/changelog/changes/023-add-phone-country-code-to-users.xml"/>
+    <include file="db/changelog/changes/024-increase-place-image-url-length.xml"/>
 
 </databaseChangeLog>

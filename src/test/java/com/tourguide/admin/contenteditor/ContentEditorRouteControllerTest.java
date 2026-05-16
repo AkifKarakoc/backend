@@ -1,18 +1,26 @@
 package com.tourguide.admin.contenteditor;
 
+import com.tourguide.admin.contenteditor.ContentEditorController;
+import com.tourguide.admin.contenteditor.ContentEditorService;
 import com.tourguide.badge.IBadgeService;
 import com.tourguide.common.exception.GlobalExceptionHandler;
+import com.tourguide.common.util.MinioUtil;
+import com.tourguide.image.ImageRepository;
 import com.tourguide.place.IPlaceService;
 import com.tourguide.place.PlaceRepository;
 import com.tourguide.quest.IQuestService;
 import com.tourguide.quest.QuestRepository;
+import com.tourguide.route.IRouteService;
 import com.tourguide.route.RoutePlaceRepository;
 import com.tourguide.route.RouteRepository;
 import com.tourguide.route.RouteService;
 import com.tourguide.route.UserRouteRepository;
+import com.tourguide.route.UserRouteStopRepository;
 import com.tourguide.badge.BadgeRepository;
+import com.tourguide.user.IUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -32,21 +40,27 @@ class ContentEditorRouteControllerTest {
         RoutePlaceRepository routePlaceRepository = mock(RoutePlaceRepository.class);
         PlaceRepository placeRepository = mock(PlaceRepository.class);
         UserRouteRepository userRouteRepository = mock(UserRouteRepository.class);
+        UserRouteStopRepository userRouteStopRepository = mock(UserRouteStopRepository.class);
+        ObjectProvider<IUserService> userServiceProvider = mock(ObjectProvider.class);
         QuestRepository questRepository = mock(QuestRepository.class);
         BadgeRepository badgeRepository = mock(BadgeRepository.class);
+        ImageRepository imageRepository = mock(ImageRepository.class);
+        MinioUtil minioUtil = mock(MinioUtil.class);
 
-        RouteService routeService = new RouteService(routeRepository, routePlaceRepository, placeRepository, userRouteRepository);
+        RouteService routeService = new RouteService(routeRepository, routePlaceRepository, placeRepository, userRouteRepository, userRouteStopRepository, userServiceProvider);
         ContentEditorService contentEditorService = new ContentEditorService(
                 mock(IPlaceService.class),
                 mock(IQuestService.class),
-                routeService,
+                mock(IRouteService.class),
                 mock(IBadgeService.class),
                 placeRepository,
                 questRepository,
-                badgeRepository
+                badgeRepository,
+                imageRepository,
+                mock(MinioUtil.class)
         );
 
-        ContentEditorController controller = new ContentEditorController(contentEditorService);
+        ContentEditorController controller = new ContentEditorController(contentEditorService, minioUtil);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();

@@ -12,6 +12,8 @@ public interface UserRouteRepository extends JpaRepository<UserRoute, UUID> {
 
     Optional<UserRoute> findByUserIdAndRouteId(UUID userId, UUID routeId);
 
+    Optional<UserRoute> findByRouteId(UUID routeId);
+
     boolean existsByUserIdAndRouteId(UUID userId, UUID routeId);
 
     List<UserRoute> findByUserId(UUID userId);

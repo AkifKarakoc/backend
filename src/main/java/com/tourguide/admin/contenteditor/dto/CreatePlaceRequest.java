@@ -37,6 +37,7 @@ public class CreatePlaceRequest {
     private String website;
     private String openingHours;
     private String photoUrl;
+    private List<String> photoUrls = new ArrayList<>();
 
     @Min(value = 1, message = "Popularity score must be at least 1")
     @Max(value = 100, message = "Popularity score must be at most 100")

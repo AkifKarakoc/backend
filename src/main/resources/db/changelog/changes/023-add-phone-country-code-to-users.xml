@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="023-add-phone-country-code-to-users" author="system">
+        <addColumn tableName="users">
+            <column name="phone_country_code" type="varchar(5)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
