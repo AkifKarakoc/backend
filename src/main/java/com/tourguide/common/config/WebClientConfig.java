@@ -12,10 +12,10 @@ import java.time.Duration;
 @Configuration
 public class WebClientConfig {
 
-    @Value("${ai-service.base-url}")
+    @Value("${ai-service.base-url:http://localhost:11434}")
     private String aiServiceBaseUrl;
 
-    @Value("${ai-service.timeout}")
+    @Value("${ai-service.timeout:30000}")
     private int timeout;
 
     @Bean

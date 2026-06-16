@@ -25,6 +25,7 @@
         <minio.version>8.5.9</minio.version>
         <geohash.version>1.4.0</geohash.version>
         <hibernate-spatial.version>6.4.4.Final</hibernate-spatial.version>
+        <langchain4j.version>1.11.8</langchain4j.version>
     </properties>
 
     <dependencies>
@@ -142,6 +143,11 @@
             <groupId>ch.hsr</groupId>
             <artifactId>geohash</artifactId>
             <version>${geohash.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-ollama</artifactId>
+            <version>${langchain4j.version}</version>
         </dependency>
 
         <!-- Image processing (WebP decode support) -->

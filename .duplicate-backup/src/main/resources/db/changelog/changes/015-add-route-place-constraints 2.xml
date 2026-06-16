@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="015-add-route-place-unique-and-indexes" author="tourguide">
+        <addUniqueConstraint tableName="route_places"
+                             columnNames="route_id, stop_order"
+                             constraintName="uk_route_places_route_stop_order"/>
+
+        <addUniqueConstraint tableName="route_places"
+                             columnNames="route_id, place_id"
+                             constraintName="uk_route_places_route_place"/>
+
+        <createIndex tableName="route_places"
+                     indexName="idx_route_places_route_stop_order">
+            <column name="route_id"/>
+            <column name="stop_order"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
