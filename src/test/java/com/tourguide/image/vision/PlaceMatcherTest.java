@@ -1,5 +1,6 @@
 package com.tourguide.image.vision;
 
+import com.tourguide.common.util.CoordinateUtil;
 import com.tourguide.place.Place;
 import com.tourguide.place.PlaceRepository;
 import org.junit.jupiter.api.Test;
@@ -175,34 +176,34 @@ class PlaceMatcherTest {
 
     @Test
     void shouldSortLandmarksByConfidenceDescendingAndReturnFirstMatch() {
-        Place closePlace = Place.builder()
+        Place placeX = Place.builder()
+                .name("Uzak Yer")
+                .latitude(41.0000)
+                .longitude(28.0000)
+                .build();
+        Place placeY = Place.builder()
                 .name("Yakın Yer")
                 .latitude(41.0000)
                 .longitude(28.0050)
                 .build();
-        Place farPlace = Place.builder()
-                .name("Uzak Yer")
-                .latitude(41.0150)
-                .longitude(28.0000)
-                .build();
-        VisionLandmark lowConfidenceFar = VisionLandmark.builder()
-                .name("Bilinmeyen Yer")
+        VisionLandmark lowConfidenceClose = VisionLandmark.builder()
+                .name("Yakın Yer")
                 .confidence(0.6)
-                .latitude(LAT)
-                .longitude(LNG)
+                .latitude(41.0000)
+                .longitude(28.0050)
                 .build();
-        VisionLandmark highConfidenceClose = VisionLandmark.builder()
-                .name("Bilinmeyen Yer")
+        VisionLandmark highConfidenceFar = VisionLandmark.builder()
+                .name("Uzak Yer")
                 .confidence(0.9)
-                .latitude(LAT)
-                .longitude(LNG)
+                .latitude(41.0000)
+                .longitude(28.0080)
                 .build();
-        when(placeRepository.findAll()).thenReturn(List.of(closePlace, farPlace));
+        when(placeRepository.findAll()).thenReturn(List.of(placeX, placeY));
 
-        Optional<Place> result = placeMatcher.match(List.of(lowConfidenceFar, highConfidenceClose));
+        Optional<Place> result = placeMatcher.match(List.of(lowConfidenceClose, highConfidenceFar));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Yakın Yer");
+        assertThat(result.get().getName()).isEqualTo("Uzak Yer");
     }
 
     @Test
@@ -328,5 +329,43 @@ class PlaceMatcherTest {
         Optional<Place> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void shouldCalculateDistanceCorrectlyAroundOneKilometer() {
+        Place place = Place.builder()
+                .name("Saat Kulesi")
+                .latitude(38.4189)
+                .longitude(27.1287)
+                .build();
+        VisionLandmark withinThreshold = VisionLandmark.builder()
+                .name("Saat Kulesi")
+                .confidence(0.95)
+                .latitude(38.4189)
+                .longitude(27.13902)
+                .build();
+        VisionLandmark beyondThreshold = VisionLandmark.builder()
+                .name("Saat Kulesi")
+                .confidence(0.95)
+                .latitude(38.4189)
+                .longitude(27.14132)
+                .build();
+        when(placeRepository.findAll()).thenReturn(List.of(place));
+
+        double withinDistanceKm = CoordinateUtil.haversineDistance(
+                place.getLatitude(), place.getLongitude(),
+                withinThreshold.getLatitude(), withinThreshold.getLongitude()) / 1000.0;
+        double beyondDistanceKm = CoordinateUtil.haversineDistance(
+                place.getLatitude(), place.getLongitude(),
+                beyondThreshold.getLatitude(), beyondThreshold.getLongitude()) / 1000.0;
+
+        assertThat(withinDistanceKm).isBetween(0.85, 0.95);
+        assertThat(beyondDistanceKm).isBetween(1.05, 1.15);
+
+        Optional<Place> withinResult = placeMatcher.match(List.of(withinThreshold));
+        Optional<Place> beyondResult = placeMatcher.match(List.of(beyondThreshold));
+
+        assertThat(withinResult).isPresent();
+        assertThat(beyondResult).isEmpty();
     }
 }
