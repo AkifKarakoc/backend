@@ -54,6 +54,7 @@ class ImageServiceTest {
 
     private final byte[] imageBytes = {1, 2, 3};
     private final String fileName = "minio-file.jpg";
+    private final String presignedUrl = "http://192.168.1.11:9000/place-images/photo.webp?X-Amz-Signature=abc";
     private MockMultipartFile photo;
 
     @BeforeEach
@@ -61,6 +62,7 @@ class ImageServiceTest {
         photo = new MockMultipartFile("photo", "image.jpg", "image/jpeg", imageBytes);
         when(pilotZoneConfig.isWithinPilotZone(any(Double.class), any(Double.class))).thenReturn(true);
         lenient().when(minioUtil.upload(anyString(), any(MultipartFile.class))).thenReturn(fileName);
+        lenient().when(minioUtil.getPresignedUrl(anyString(), anyString())).thenReturn(presignedUrl);
     }
 
     @Test
@@ -99,7 +101,7 @@ class ImageServiceTest {
         assertThat(response.getPlaceName()).isEqualTo(place.getName());
         assertThat(response.getConfidence()).isEqualTo(0.85);
         assertThat(response.getDescription()).isEqualTo(place.getDescription());
-        assertThat(response.getImageUrl()).isEqualTo(fileName);
+        assertThat(response.getImageUrl()).isEqualTo(presignedUrl);
     }
 
     @Test
@@ -144,7 +146,7 @@ class ImageServiceTest {
         assertThat(response.getPlaceName()).isEqualTo(place.getName());
         assertThat(response.getConfidence()).isEqualTo(0.75);
         assertThat(response.getDescription()).isEqualTo(place.getDescription());
-        assertThat(response.getImageUrl()).isEqualTo(fileName);
+        assertThat(response.getImageUrl()).isEqualTo(presignedUrl);
     }
 
     @Test
@@ -181,7 +183,7 @@ class ImageServiceTest {
         assertThat(response.getPlaceName()).isEqualTo(place.getName());
         assertThat(response.getConfidence()).isEqualTo(0.85);
         assertThat(response.getDescription()).isEqualTo("Google Vision tarafından tanımlandı.");
-        assertThat(response.getImageUrl()).isEqualTo(fileName);
+        assertThat(response.getImageUrl()).isEqualTo(presignedUrl);
     }
 
     @Test
@@ -197,7 +199,7 @@ class ImageServiceTest {
         assertThat(response.getPlaceName()).isEqualTo("Tanımlanamadı");
         assertThat(response.getConfidence()).isEqualTo(0.0);
         assertThat(response.getDescription()).isEqualTo("Bu fotoğrafta tanıdık bir yer tespit edilemedi.");
-        assertThat(response.getImageUrl()).isEqualTo(fileName);
+        assertThat(response.getImageUrl()).isEqualTo(presignedUrl);
     }
 
     @Test
@@ -221,7 +223,7 @@ class ImageServiceTest {
         assertThat(response.getPlaceName()).isEqualTo("Unknown Tower");
         assertThat(response.getConfidence()).isEqualTo(0.7);
         assertThat(response.getDescription()).isEqualTo("Veritabanında eşleşen yer bulunamadı.");
-        assertThat(response.getImageUrl()).isEqualTo(fileName);
+        assertThat(response.getImageUrl()).isEqualTo(presignedUrl);
     }
 
     @Test
@@ -237,7 +239,7 @@ class ImageServiceTest {
         assertThat(response.getPlaceName()).isEqualTo("Tanımlanamadı");
         assertThat(response.getConfidence()).isEqualTo(0.0);
         assertThat(response.getDescription()).isEqualTo("Görsel tanıma sırasında bir hata oluştu.");
-        assertThat(response.getImageUrl()).isEqualTo(fileName);
+        assertThat(response.getImageUrl()).isEqualTo(presignedUrl);
     }
 
     @Test

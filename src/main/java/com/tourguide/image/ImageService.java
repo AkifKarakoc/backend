@@ -46,13 +46,14 @@ public class ImageService {
         }
 
         String fileName = minioUtil.upload(PLACE_IMAGES_BUCKET, photo);
+        String imageUrl = minioUtil.getPresignedUrl(PLACE_IMAGES_BUCKET, fileName);
 
         try {
             List<VisionLandmark> landmarks = googleVisionClient.detectLandmarks(imageBytes);
 
             if (landmarks.isEmpty()) {
                 return buildResponse(null, "Tanımlanamadı", 0.0,
-                        "Bu fotoğrafta tanıdık bir yer tespit edilemedi.", fileName);
+                        "Bu fotoğrafta tanıdık bir yer tespit edilemedi.", imageUrl);
             }
 
             Optional<PlaceMatcher.PlaceMatchResult> matchedPlace = placeMatcher.match(landmarks);
@@ -65,7 +66,7 @@ public class ImageService {
                         ? place.getDescription()
                         : (place.getCategory() != null ? place.getCategory() : "Google Vision tarafından tanımlandı.");
                 return buildResponse(place.getId(), place.getName(), matchedLandmark.getConfidence(),
-                        description, fileName);
+                        description, imageUrl);
             }
 
             VisionLandmark bestLandmark = landmarks.stream()
@@ -73,15 +74,15 @@ public class ImageService {
                     .orElseThrow();
 
             return buildResponse(null, bestLandmark.getName(), bestLandmark.getConfidence(),
-                    "Veritabanında eşleşen yer bulunamadı.", fileName);
+                    "Veritabanında eşleşen yer bulunamadı.", imageUrl);
         } catch (GoogleVisionException e) {
             log.error("Google Vision API call failed", e);
             return buildResponse(null, "Tanımlanamadı", 0.0,
-                    "Görsel tanıma sırasında bir hata oluştu.", fileName);
+                    "Görsel tanıma sırasında bir hata oluştu.", imageUrl);
         } catch (Exception e) {
             log.error("Image identification failed", e);
             return buildResponse(null, "Tanımlanamadı", 0.0,
-                    "Görsel tanıma sırasında bir hata oluştu.", fileName);
+                    "Görsel tanıma sırasında bir hata oluştu.", imageUrl);
         }
     }
 
