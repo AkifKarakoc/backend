@@ -7,6 +7,7 @@ import com.tourguide.image.vision.GoogleVisionClient;
 import com.tourguide.image.vision.PlaceMatcher;
 import com.tourguide.image.vision.VisionLandmark;
 import com.tourguide.place.Place;
+import com.tourguide.place.PlaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +55,9 @@ class ImageServiceTest {
     @Mock
     private ImagePreprocessor imagePreprocessor;
 
+    @Mock
+    private PlaceRepository placeRepository;
+
     @InjectMocks
     private ImageService imageService;
 
@@ -69,6 +73,7 @@ class ImageServiceTest {
         lenient().when(imagePreprocessor.preprocess(imageBytes)).thenReturn(imageBytes);
         lenient().when(minioUtil.upload(anyString(), any(byte[].class), anyString())).thenReturn(fileName);
         lenient().when(minioUtil.getPresignedUrl(anyString(), anyString())).thenReturn(presignedUrl);
+        lenient().when(placeRepository.findAll()).thenReturn(Collections.emptyList());
     }
 
     @Test
@@ -255,6 +260,36 @@ class ImageServiceTest {
         assertThat(response.getConfidence()).isEqualTo(0.7);
         assertThat(response.getDescription()).isEqualTo("Veritabanında eşleşen yer bulunamadı.");
         assertThat(response.getImageUrl()).isEqualTo(presignedUrl);
+    }
+
+    @Test
+    void identifyImage_shouldReturnNearestPlace_whenVisionFindsNothing() {
+        // given
+        Place ephesus = Place.builder()
+                .name("Efes Antik Kenti")
+                .description("Antik kent")
+                .latitude(37.9495)
+                .longitude(27.3640)
+                .build();
+        ephesus.setId(UUID.randomUUID());
+
+        GoogleVisionClient.VisionDetectionResult detectionResult =
+                new GoogleVisionClient.VisionDetectionResult(
+                        Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+
+        when(googleVisionClient.detectAll(imageBytes)).thenReturn(detectionResult);
+        when(placeMatcher.match(Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
+                .thenReturn(Optional.empty());
+        when(placeRepository.findAll()).thenReturn(List.of(ephesus));
+
+        // when
+        ImageAnalysisResponse response = imageService.identifyImage(photo, 37.9495, 27.3640, UUID.randomUUID());
+
+        // then
+        assertThat(response.getPlaceId()).isEqualTo(ephesus.getId());
+        assertThat(response.getPlaceName()).isEqualTo("Efes Antik Kenti");
+        assertThat(response.getConfidence()).isEqualTo(0.0);
+        assertThat(response.getDescription()).isEqualTo("Antik kent");
     }
 
     @Test

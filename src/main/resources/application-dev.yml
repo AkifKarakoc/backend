@@ -34,6 +34,7 @@ google:
     api-key: ${GOOGLE_VISION_API_KEY}
     confidence-threshold: ${GOOGLE_VISION_CONFIDENCE_THRESHOLD:0.5}
     max-distance-km: ${GOOGLE_VISION_MAX_DISTANCE_KM:1.0}
+    fallback-max-distance-km: ${GOOGLE_VISION_FALLBACK_MAX_DISTANCE_KM:2.0}
 
 # JWT Configuration
 jwt:

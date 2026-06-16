@@ -2,6 +2,7 @@ package com.tourguide.image;
 
 import com.tourguide.common.config.PilotZoneConfig;
 import com.tourguide.common.exception.OutsidePilotZoneException;
+import com.tourguide.common.util.CoordinateUtil;
 import com.tourguide.common.util.MinioUtil;
 import com.tourguide.image.dto.ImageAnalysisResponse;
 import com.tourguide.image.vision.GoogleVisionClient;
@@ -9,8 +10,10 @@ import com.tourguide.image.vision.GoogleVisionException;
 import com.tourguide.image.vision.PlaceMatcher;
 import com.tourguide.image.vision.VisionLandmark;
 import com.tourguide.place.Place;
+import com.tourguide.place.PlaceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,6 +33,10 @@ public class ImageService {
     private final GoogleVisionClient googleVisionClient;
     private final PlaceMatcher placeMatcher;
     private final ImagePreprocessor imagePreprocessor;
+    private final PlaceRepository placeRepository;
+
+    @Value("${google.vision.fallback-max-distance-km:2.0}")
+    private double fallbackMaxDistanceKm = 2.0;
 
     private static final String PLACE_IMAGES_BUCKET = "place-images";
     private static final String JPEG_CONTENT_TYPE = "image/jpeg";
@@ -82,6 +89,17 @@ public class ImageService {
                 return buildResponse(place.getId(), place.getName(), confidence, description, imageUrl);
             }
 
+            Optional<Place> nearestPlace = findNearestPlace(latitude, longitude);
+            if (nearestPlace.isPresent()) {
+                Place place = nearestPlace.get();
+                String description = place.getDescription() != null
+                        ? place.getDescription()
+                        : "Yakındaki yer bulundu.";
+                log.info("Coordinate fallback selected place: {} (distance <= {} km)",
+                        place.getName(), fallbackMaxDistanceKm);
+                return buildResponse(place.getId(), place.getName(), 0.0, description, imageUrl);
+            }
+
             if (!landmarks.isEmpty()) {
                 VisionLandmark bestLandmark = landmarks.stream()
                         .max(java.util.Comparator.comparingDouble(VisionLandmark::getConfidence))
@@ -108,6 +126,31 @@ public class ImageService {
         return result.getSource() == PlaceMatcher.MatchSource.LANDMARK && result.getMatchedLandmark() != null
                 ? result.getMatchedLandmark().getConfidence()
                 : 0.0;
+    }
+
+    private Optional<Place> findNearestPlace(double latitude, double longitude) {
+        List<Place> places = placeRepository.findAll();
+        if (places.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Place closest = null;
+        double minDistanceKm = Double.MAX_VALUE;
+
+        for (Place place : places) {
+            double distanceKm = CoordinateUtil.haversineDistance(
+                    latitude, longitude, place.getLatitude(), place.getLongitude()) / 1000.0;
+            if (distanceKm < minDistanceKm) {
+                minDistanceKm = distanceKm;
+                closest = place;
+            }
+        }
+
+        if (closest != null && minDistanceKm <= fallbackMaxDistanceKm) {
+            log.debug("Nearest place to user coordinate: {} ({} km)", closest.getName(), minDistanceKm);
+            return Optional.of(closest);
+        }
+        return Optional.empty();
     }
 
     private ImageAnalysisResponse buildResponse(UUID placeId, String placeName, Double confidence,
