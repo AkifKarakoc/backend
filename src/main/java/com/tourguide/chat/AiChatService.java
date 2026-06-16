@@ -1,6 +1,5 @@
 package com.tourguide.chat;
 
-import dev.langchain4j.model.chat.ChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,15 +14,15 @@ public class AiChatService {
     private static final int MAX_CONTEXT_MESSAGES = 12;
     private static final String FALLBACK_RESPONSE = "AI modeline bağlanılamadı. Lütfen daha sonra tekrar deneyin.";
 
-    private final ChatModel chatModel;
+    private final AiModelClient aiModelClient;
     private final ChatKnowledgeService chatKnowledgeService;
 
     public String generateReply(List<ChatMessage> conversation, String language) {
         try {
             String knowledgeContext = chatKnowledgeService.buildKnowledgeContext(conversation);
-            return chatModel.chat(buildPrompt(conversation, language, knowledgeContext));
+            return aiModelClient.generate(buildPrompt(conversation, language, knowledgeContext));
         } catch (Exception e) {
-            log.error("Local AI model call failed: {}", e.getMessage());
+            log.error("AI model call failed: {}", e.getMessage());
             return FALLBACK_RESPONSE;
         }
     }

@@ -40,8 +40,15 @@ jwt:
 
 # AI Service Configuration
 ai-service:
+  provider: ${AI_PROVIDER:ollama}
   base-url: ${AI_SERVICE_URL:http://159.65.127.73:8000}
   timeout: 30000
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+  model-name: ${GEMINI_MODEL_NAME:gemini-2.0-flash}
+  temperature: ${GEMINI_TEMPERATURE:0.4}
 
 # Pilot Zone Configuration (Izmir bounds)
 pilot-zone:
