@@ -1,5 +1,6 @@
 package com.tourguide.image.vision;
 
+import com.tourguide.common.util.CoordinateUtil;
 import com.tourguide.place.Place;
 import com.tourguide.place.PlaceRepository;
 import org.springframework.stereotype.Component;
@@ -9,13 +10,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Component
 public class PlaceMatcher {
 
     private static final double CONFIDENCE_THRESHOLD = 0.5;
     private static final double MAX_DISTANCE_KM = 1.0;
-    private static final double EARTH_RADIUS_KM = 6371.0;
+    private static final Pattern NON_ALPHANUMERIC_EXCEPT_SPACE = Pattern.compile("[^a-z0-9 ]");
 
     private final PlaceRepository placeRepository;
 
@@ -23,7 +25,7 @@ public class PlaceMatcher {
         this.placeRepository = placeRepository;
     }
 
-    public Optional<Place> match(List<VisionLandmark> landmarks, double userLatitude, double userLongitude) {
+    public Optional<Place> match(List<VisionLandmark> landmarks) {
         if (landmarks == null || landmarks.isEmpty()) {
             return Optional.empty();
         }
@@ -56,11 +58,11 @@ public class PlaceMatcher {
         double minDistance = Double.MAX_VALUE;
 
         for (Place place : candidates) {
-            double distance = haversine(
+            double distanceKm = CoordinateUtil.haversineDistance(
                     landmark.getLatitude(), landmark.getLongitude(),
-                    place.getLatitude(), place.getLongitude());
-            if (distance < minDistance) {
-                minDistance = distance;
+                    place.getLatitude(), place.getLongitude()) / 1000.0;
+            if (distanceKm < minDistance) {
+                minDistance = distanceKm;
                 closest = place;
             }
         }
@@ -94,20 +96,8 @@ public class PlaceMatcher {
         String normalized = input.toLowerCase(Locale.ROOT);
         normalized = Normalizer.normalize(normalized, Normalizer.Form.NFD);
         normalized = normalized.replace('ı', 'i');
-        normalized = normalized.replaceAll("[^a-z0-9 ]", "");
+        normalized = NON_ALPHANUMERIC_EXCEPT_SPACE.matcher(normalized).replaceAll("");
         normalized = normalized.trim();
         return normalized;
-    }
-
-    private double haversine(double lat1, double lon1, double lat2, double lon2) {
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return EARTH_RADIUS_KM * c;
     }
 }
