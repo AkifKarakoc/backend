@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="014-update-badge-icon-fields" author="tourguide">
+        <renameColumn tableName="badges"
+                      oldColumnName="icon_url"
+                      newColumnName="icon_name"
+                      columnDataType="varchar(100)"/>
+
+        <addColumn tableName="badges">
+            <column name="icon_color" type="varchar(7)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

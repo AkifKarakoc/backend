@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="018-create-user-routes-table" author="tourguide">
+        <createTable tableName="user_routes">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="route_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(20)" defaultValue="IN_PROGRESS">
+                <constraints nullable="false"/>
+            </column>
+            <column name="started_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed_at" type="timestamp"/>
+        </createTable>
+
+        <addUniqueConstraint tableName="user_routes"
+                             columnNames="user_id, route_id"
+                             constraintName="uk_user_routes"/>
+
+        <addForeignKeyConstraint baseTableName="user_routes"
+                                 baseColumnNames="user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_user_routes_user"/>
+
+        <addForeignKeyConstraint baseTableName="user_routes"
+                                 baseColumnNames="route_id"
+                                 referencedTableName="routes"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_user_routes_route"/>
+    </changeSet>
+
+</databaseChangeLog>

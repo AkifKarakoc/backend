@@ -28,3 +28,12 @@ management:
 # CORS Configuration
 cors:
   allowed-origins: "*"
+
+# Local AI Configuration
+local-ai:
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    model-name: ${OLLAMA_MODEL_NAME:qwen3:8b}
+    temperature: ${OLLAMA_TEMPERATURE:0.4}
+    think: ${OLLAMA_THINK:false}
+    timeout: ${OLLAMA_TIMEOUT:PT120S}

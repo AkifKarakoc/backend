@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="017-add-places-popularity-keywords" author="tourguide">
+        <comment>
+            Add popularity_score and keywords columns to places table.
+            popularity_score: integer 1-100, used for RAG re-ranking in chatbot.
+            keywords: JSON text array, used for semantic enrichment in ChromaDB.
+        </comment>
+
+        <addColumn tableName="places">
+            <column name="popularity_score" type="integer" defaultValueNumeric="5">
+                <constraints nullable="false"/>
+            </column>
+            <column name="keywords" type="text"/>
+        </addColumn>
+
+        <!-- popularity_score üzerinde index: yüksek skorlu mekanları hızlı sorgulamak için -->
+        <createIndex indexName="idx_places_popularity_score" tableName="places">
+            <column name="popularity_score" descending="true"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
