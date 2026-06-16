@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Set;
 import java.util.UUID;
@@ -40,6 +41,24 @@ public class MinioUtil {
                     .object(fileName)
                     .stream(inputStream, file.getSize(), -1)
                     .contentType(file.getContentType())
+                    .build());
+            log.info("Uploaded file {} to bucket {}", fileName, bucket);
+            return fileName;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload file to MinIO", e);
+        }
+    }
+
+    public String upload(String bucket, byte[] fileBytes, String contentType) {
+        validateFile(fileBytes, contentType);
+
+        String fileName = UUID.randomUUID() + getExtensionFromContentType(contentType);
+        try (InputStream inputStream = new ByteArrayInputStream(fileBytes)) {
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(bucket)
+                    .object(fileName)
+                    .stream(inputStream, fileBytes.length, -1)
+                    .contentType(contentType)
                     .build());
             log.info("Uploaded file {} to bucket {}", fileName, bucket);
             return fileName;
@@ -106,10 +125,30 @@ public class MinioUtil {
         }
     }
 
+    private void validateFile(byte[] fileBytes, String contentType) {
+        if (fileBytes == null || fileBytes.length == 0) {
+            throw new FileValidationException("File is empty");
+        }
+        if (fileBytes.length > MAX_FILE_SIZE) {
+            throw new FileValidationException("File size exceeds maximum allowed size of 10MB");
+        }
+        if (!ALLOWED_IMAGE_TYPES.contains(contentType)) {
+            throw new FileValidationException("File type not allowed. Allowed types: JPEG, PNG, WebP");
+        }
+    }
+
     private String getExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
             return ".jpg";
         }
         return filename.substring(filename.lastIndexOf('.'));
+    }
+
+    private String getExtensionFromContentType(String contentType) {
+        return switch (contentType) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            default -> ".jpg";
+        };
     }
 }
