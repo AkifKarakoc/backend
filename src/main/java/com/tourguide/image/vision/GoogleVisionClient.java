@@ -50,13 +50,20 @@ public class GoogleVisionClient {
     }
 
     public List<VisionLandmark> detectLandmarks(byte[] imageBytes) {
+        return detectAll(imageBytes).landmarks();
+    }
+
+    public VisionDetectionResult detectAll(byte[] imageBytes) {
         if (imageBytes == null || imageBytes.length == 0) {
             throw new IllegalArgumentException("imageBytes must not be null or empty");
         }
 
         String requestBody = buildRequestBody(imageBytes);
         String responseBody = postToVisionApi(requestBody);
-        return parseLandmarks(responseBody);
+        return new VisionDetectionResult(
+                parseLandmarks(responseBody),
+                parseWebEntities(responseBody),
+                parseLabels(responseBody));
     }
 
     String postToVisionApi(String requestBody) {
@@ -112,32 +119,14 @@ public class GoogleVisionClient {
     }
 
     public List<VisionLandmark> parseLandmarks(String jsonResponse) {
-        if (!StringUtils.hasText(jsonResponse)) {
+        AnnotateImageResponse firstResponse = parseFirstResponse(jsonResponse);
+        if (firstResponse == null || firstResponse.landmarkAnnotations == null) {
             return Collections.emptyList();
         }
 
-        try {
-            VisionApiResponse response = jsonObjectParser.parseAndClose(
-                    new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)),
-                    StandardCharsets.UTF_8,
-                    VisionApiResponse.class);
-
-            if (response == null || response.responses == null || response.responses.isEmpty()) {
-                return Collections.emptyList();
-            }
-
-            AnnotateImageResponse firstResponse = response.responses.get(0);
-            if (firstResponse == null || firstResponse.landmarkAnnotations == null) {
-                return Collections.emptyList();
-            }
-
-            return firstResponse.landmarkAnnotations.stream()
-                    .map(this::toVisionLandmark)
-                    .toList();
-        } catch (IOException e) {
-            log.error("Failed to parse Google Vision API response", e);
-            throw new GoogleVisionException("Failed to parse Google Vision API response", e);
-        }
+        return firstResponse.landmarkAnnotations.stream()
+                .map(this::toVisionLandmark)
+                .toList();
     }
 
     private VisionLandmark toVisionLandmark(LandmarkAnnotation annotation) {
@@ -161,8 +150,38 @@ public class GoogleVisionClient {
     }
 
     public List<String> parseWebEntities(String jsonResponse) {
-        if (!StringUtils.hasText(jsonResponse)) {
+        AnnotateImageResponse firstResponse = parseFirstResponse(jsonResponse);
+        if (firstResponse == null
+                || firstResponse.webDetection == null
+                || firstResponse.webDetection.webEntities == null) {
             return Collections.emptyList();
+        }
+
+        return firstResponse.webDetection.webEntities.stream()
+                .filter(entity -> entity != null && entity.description != null)
+                .sorted(Comparator.comparingDouble(
+                        (WebEntity entity) -> entity.score != null ? entity.score : 0.0).reversed())
+                .map(entity -> entity.description)
+                .toList();
+    }
+
+    public List<String> parseLabels(String jsonResponse) {
+        AnnotateImageResponse firstResponse = parseFirstResponse(jsonResponse);
+        if (firstResponse == null || firstResponse.labelAnnotations == null) {
+            return Collections.emptyList();
+        }
+
+        return firstResponse.labelAnnotations.stream()
+                .filter(label -> label != null && label.description != null)
+                .sorted(Comparator.comparingDouble(
+                        (LabelAnnotation label) -> label.score != null ? label.score : 0.0).reversed())
+                .map(label -> label.description)
+                .toList();
+    }
+
+    private AnnotateImageResponse parseFirstResponse(String jsonResponse) {
+        if (!StringUtils.hasText(jsonResponse)) {
+            return null;
         }
 
         try {
@@ -172,58 +191,20 @@ public class GoogleVisionClient {
                     VisionApiResponse.class);
 
             if (response == null || response.responses == null || response.responses.isEmpty()) {
-                return Collections.emptyList();
+                return null;
             }
 
-            AnnotateImageResponse firstResponse = response.responses.get(0);
-            if (firstResponse == null
-                    || firstResponse.webDetection == null
-                    || firstResponse.webDetection.webEntities == null) {
-                return Collections.emptyList();
-            }
-
-            return firstResponse.webDetection.webEntities.stream()
-                    .filter(entity -> entity != null && entity.description != null)
-                    .sorted(Comparator.comparingDouble(
-                            (WebEntity entity) -> entity.score != null ? entity.score : 0.0).reversed())
-                    .map(entity -> entity.description)
-                    .toList();
+            return response.responses.get(0);
         } catch (IOException e) {
             log.error("Failed to parse Google Vision API response", e);
             throw new GoogleVisionException("Failed to parse Google Vision API response", e);
         }
     }
 
-    public List<String> parseLabels(String jsonResponse) {
-        if (!StringUtils.hasText(jsonResponse)) {
-            return Collections.emptyList();
-        }
-
-        try {
-            VisionApiResponse response = jsonObjectParser.parseAndClose(
-                    new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)),
-                    StandardCharsets.UTF_8,
-                    VisionApiResponse.class);
-
-            if (response == null || response.responses == null || response.responses.isEmpty()) {
-                return Collections.emptyList();
-            }
-
-            AnnotateImageResponse firstResponse = response.responses.get(0);
-            if (firstResponse == null || firstResponse.labelAnnotations == null) {
-                return Collections.emptyList();
-            }
-
-            return firstResponse.labelAnnotations.stream()
-                    .filter(label -> label != null && label.description != null)
-                    .sorted(Comparator.comparingDouble(
-                            (LabelAnnotation label) -> label.score != null ? label.score : 0.0).reversed())
-                    .map(label -> label.description)
-                    .toList();
-        } catch (IOException e) {
-            log.error("Failed to parse Google Vision API response", e);
-            throw new GoogleVisionException("Failed to parse Google Vision API response", e);
-        }
+    public record VisionDetectionResult(
+            List<VisionLandmark> landmarks,
+            List<String> webEntities,
+            List<String> labels) {
     }
 
     public static class VisionApiResponse {
