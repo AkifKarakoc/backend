@@ -9,7 +9,12 @@ import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -19,11 +24,35 @@ import java.util.List;
 public class GoogleVisionClient {
 
     private final String apiKey;
+    private final HttpClient httpClient;
     private final JsonObjectParser jsonObjectParser;
 
     public GoogleVisionClient(@Value("${google.vision.api-key}") String apiKey) {
         this.apiKey = apiKey;
+        this.httpClient = HttpClient.newHttpClient();
         this.jsonObjectParser = new JsonObjectParser(JacksonFactory.getDefaultInstance());
+    }
+
+    public List<VisionLandmark> detectLandmarks(byte[] imageBytes) {
+        String requestBody = buildRequestBody(imageBytes);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://vision.googleapis.com/v1/images:annotate?key=" + apiKey))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .timeout(Duration.ofSeconds(10))
+                .build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                log.error("Google Vision API returned non-200 status: {}", response.statusCode());
+                throw new RuntimeException("Google Vision API call failed with status: " + response.statusCode());
+            }
+            return parseLandmarks(response.body());
+        } catch (IOException | InterruptedException e) {
+            log.error("Failed to call Google Vision API", e);
+            throw new RuntimeException("Failed to call Google Vision API", e);
+        }
     }
 
     public String buildRequestBody(byte[] imageBytes) {
