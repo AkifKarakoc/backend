@@ -180,6 +180,46 @@ class GoogleVisionClientTest {
         assertThat(landmarks.get(0).getName()).isEqualTo("Saat Kulesi");
     }
 
+    @Test
+    void detectWebEntities_shouldReturnDescriptions() {
+        String response = """
+                {
+                  "responses": [{
+                    "webDetection": {
+                      "webEntities": [
+                        {"description": "Ephesus", "score": 0.95},
+                        {"description": "Library of Celsus", "score": 0.87}
+                      ]
+                    }
+                  }]
+                }
+                """;
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+
+        List<String> entities = client.parseWebEntities(response);
+
+        assertThat(entities).containsExactly("Ephesus", "Library of Celsus");
+    }
+
+    @Test
+    void detectLabels_shouldReturnDescriptions() {
+        String response = """
+                {
+                  "responses": [{
+                    "labelAnnotations": [
+                      {"description": "ancient roman ruins", "score": 0.92},
+                      {"description": "amphitheatre", "score": 0.81}
+                    ]
+                  }]
+                }
+                """;
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+
+        List<String> labels = client.parseLabels(response);
+
+        assertThat(labels).containsExactly("ancient roman ruins", "amphitheatre");
+    }
+
     static class Non200GoogleVisionClient extends GoogleVisionClient {
         Non200GoogleVisionClient() {
             super("dummy-api-key");

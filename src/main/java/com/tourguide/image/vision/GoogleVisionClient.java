@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -26,6 +27,8 @@ public class GoogleVisionClient {
 
     private static final String VISION_API_URL = "https://vision.googleapis.com/v1/images:annotate";
     private static final String LANDMARK_DETECTION_FEATURE = "LANDMARK_DETECTION";
+    private static final String WEB_DETECTION_FEATURE = "WEB_DETECTION";
+    private static final String LABEL_DETECTION_FEATURE = "LABEL_DETECTION";
     private static final int MAX_RESULTS = 10;
     private static final int HTTP_OK = 200;
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
@@ -59,6 +62,7 @@ public class GoogleVisionClient {
     String postToVisionApi(String requestBody) {
         // Google Vision REST API requires the API key in the query string.
         // Key restrictions (IP, referrer, etc.) should be configured in Google Cloud Console.
+        log.debug("Sending request to Google Vision API ({} bytes)", requestBody.length());
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(VISION_API_URL + "?key=" + apiKey))
                 .header("Content-Type", "application/json")
@@ -68,6 +72,8 @@ public class GoogleVisionClient {
 
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            log.debug("Google Vision API responded with status: {}", response.statusCode());
+            log.trace("Google Vision API response body: {}", response.body());
             if (response.statusCode() != HTTP_OK) {
                 log.error("Google Vision API returned non-200 status: {}", response.statusCode());
                 throw new GoogleVisionException(
@@ -92,13 +98,17 @@ public class GoogleVisionClient {
                     "image": {
                       "content": "%s"
                     },
-                    "features": [{
-                      "type": "%s",
-                      "maxResults": %d
-                    }]
+                    "features": [
+                      {"type": "%s", "maxResults": %d},
+                      {"type": "%s", "maxResults": %d},
+                      {"type": "%s", "maxResults": %d}
+                    ]
                   }]
                 }
-                """.formatted(base64Image, LANDMARK_DETECTION_FEATURE, MAX_RESULTS);
+                """.formatted(base64Image,
+                        LANDMARK_DETECTION_FEATURE, MAX_RESULTS,
+                        WEB_DETECTION_FEATURE, MAX_RESULTS,
+                        LABEL_DETECTION_FEATURE, MAX_RESULTS);
     }
 
     public List<VisionLandmark> parseLandmarks(String jsonResponse) {
@@ -150,6 +160,72 @@ public class GoogleVisionClient {
                 .build();
     }
 
+    public List<String> parseWebEntities(String jsonResponse) {
+        if (!StringUtils.hasText(jsonResponse)) {
+            return Collections.emptyList();
+        }
+
+        try {
+            VisionApiResponse response = jsonObjectParser.parseAndClose(
+                    new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)),
+                    StandardCharsets.UTF_8,
+                    VisionApiResponse.class);
+
+            if (response == null || response.responses == null || response.responses.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            AnnotateImageResponse firstResponse = response.responses.get(0);
+            if (firstResponse == null
+                    || firstResponse.webDetection == null
+                    || firstResponse.webDetection.webEntities == null) {
+                return Collections.emptyList();
+            }
+
+            return firstResponse.webDetection.webEntities.stream()
+                    .filter(entity -> entity != null && entity.description != null)
+                    .sorted(Comparator.comparingDouble(
+                            (WebEntity entity) -> entity.score != null ? entity.score : 0.0).reversed())
+                    .map(entity -> entity.description)
+                    .toList();
+        } catch (IOException e) {
+            log.error("Failed to parse Google Vision API response", e);
+            throw new GoogleVisionException("Failed to parse Google Vision API response", e);
+        }
+    }
+
+    public List<String> parseLabels(String jsonResponse) {
+        if (!StringUtils.hasText(jsonResponse)) {
+            return Collections.emptyList();
+        }
+
+        try {
+            VisionApiResponse response = jsonObjectParser.parseAndClose(
+                    new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)),
+                    StandardCharsets.UTF_8,
+                    VisionApiResponse.class);
+
+            if (response == null || response.responses == null || response.responses.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            AnnotateImageResponse firstResponse = response.responses.get(0);
+            if (firstResponse == null || firstResponse.labelAnnotations == null) {
+                return Collections.emptyList();
+            }
+
+            return firstResponse.labelAnnotations.stream()
+                    .filter(label -> label != null && label.description != null)
+                    .sorted(Comparator.comparingDouble(
+                            (LabelAnnotation label) -> label.score != null ? label.score : 0.0).reversed())
+                    .map(label -> label.description)
+                    .toList();
+        } catch (IOException e) {
+            log.error("Failed to parse Google Vision API response", e);
+            throw new GoogleVisionException("Failed to parse Google Vision API response", e);
+        }
+    }
+
     public static class VisionApiResponse {
         @Key
         List<AnnotateImageResponse> responses;
@@ -158,6 +234,12 @@ public class GoogleVisionClient {
     public static class AnnotateImageResponse {
         @Key
         List<LandmarkAnnotation> landmarkAnnotations;
+
+        @Key
+        WebDetection webDetection;
+
+        @Key
+        List<LabelAnnotation> labelAnnotations;
     }
 
     public static class LandmarkAnnotation {
@@ -182,5 +264,26 @@ public class GoogleVisionClient {
 
         @Key
         Double longitude;
+    }
+
+    public static class WebDetection {
+        @Key
+        List<WebEntity> webEntities;
+    }
+
+    public static class WebEntity {
+        @Key
+        String description;
+
+        @Key
+        Double score;
+    }
+
+    public static class LabelAnnotation {
+        @Key
+        String description;
+
+        @Key
+        Double score;
     }
 }
