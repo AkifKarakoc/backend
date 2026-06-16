@@ -32,6 +32,11 @@ minio:
     badge-icons: badge-icons
     quest-verifications: quest-verifications
 
+# Google Vision API Configuration
+google:
+  vision:
+    api-key: ${GOOGLE_VISION_API_KEY}
+
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET}
