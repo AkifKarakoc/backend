@@ -3,6 +3,8 @@ package com.tourguide.image.vision;
 import com.tourguide.common.util.CoordinateUtil;
 import com.tourguide.place.Place;
 import com.tourguide.place.PlaceRepository;
+import lombok.Builder;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -56,9 +58,10 @@ public class PlaceMatcher {
      * (default 1.0 km).
      *
      * @param landmarks list of landmarks detected by Google Vision
-     * @return the best matching place, or {@link Optional#empty()} if no match is found
+     * @return the best matching place together with the landmark that produced the match,
+     *         or {@link Optional#empty()} if no match is found
      */
-    public Optional<Place> match(List<VisionLandmark> landmarks) {
+    public Optional<PlaceMatchResult> match(List<VisionLandmark> landmarks) {
         if (landmarks == null || landmarks.isEmpty()) {
             return Optional.empty();
         }
@@ -76,7 +79,7 @@ public class PlaceMatcher {
                 .findFirst();
     }
 
-    private Optional<Place> matchLandmark(VisionLandmark landmark, List<Place> allPlaces) {
+    private Optional<PlaceMatchResult> matchLandmark(VisionLandmark landmark, List<Place> allPlaces) {
         String normalizedLandmarkName = normalize(landmark.getName());
 
         List<Place> candidates = allPlaces.stream()
@@ -101,7 +104,10 @@ public class PlaceMatcher {
         }
 
         if (minDistance <= maxDistanceKm) {
-            return Optional.ofNullable(closest);
+            return Optional.of(PlaceMatchResult.builder()
+                    .place(closest)
+                    .matchedLandmark(landmark)
+                    .build());
         }
         return Optional.empty();
     }
@@ -133,5 +139,12 @@ public class PlaceMatcher {
         normalized = MULTIPLE_SPACES.matcher(normalized).replaceAll(" ");
         normalized = normalized.trim();
         return normalized;
+    }
+
+    @Getter
+    @Builder
+    public static class PlaceMatchResult {
+        private final Place place;
+        private final VisionLandmark matchedLandmark;
     }
 }

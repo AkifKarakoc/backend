@@ -42,10 +42,11 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Ayasofya Müzesi");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Ayasofya Müzesi");
+        assertThat(result.get().getMatchedLandmark().getName()).isEqualTo("Ayasofya");
     }
 
     @Test
@@ -57,7 +58,7 @@ class PlaceMatcherTest {
                 .longitude(LNG)
                 .build();
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isEmpty();
     }
@@ -77,10 +78,11 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Taksim Meydanı");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Taksim Meydanı");
+        assertThat(result.get().getMatchedLandmark().getName()).isEqualTo("Bilinmeyen Yer");
     }
 
     @Test
@@ -103,10 +105,10 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(closePlace, farPlace));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Yakın Yer");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Yakın Yer");
     }
 
     @Test
@@ -119,14 +121,14 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of());
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isEmpty();
     }
 
     @Test
     void shouldReturnEmptyWhenNoLandmarks() {
-        Optional<Place> result = placeMatcher.match(List.of());
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of());
 
         assertThat(result).isEmpty();
     }
@@ -146,7 +148,7 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isEmpty();
     }
@@ -168,10 +170,10 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Türkçe İsim");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Türkçe İsim");
     }
 
     @Test
@@ -200,10 +202,12 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(placeX, placeY));
 
-        Optional<Place> result = placeMatcher.match(List.of(lowConfidenceClose, highConfidenceFar));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(lowConfidenceClose, highConfidenceFar));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Uzak Yer");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Uzak Yer");
+        assertThat(result.get().getMatchedLandmark().getName()).isEqualTo("Uzak Yer");
+        assertThat(result.get().getMatchedLandmark().getConfidence()).isEqualTo(0.9);
     }
 
     @Test
@@ -221,10 +225,10 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("İzmir Saat Kulesi");
+        assertThat(result.get().getPlace().getName()).isEqualTo("İzmir Saat Kulesi");
     }
 
     @Test
@@ -242,10 +246,10 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Istanbul");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Istanbul");
     }
 
     @Test
@@ -263,10 +267,10 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Şehir Müzesi Çok Güzel");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Şehir Müzesi Çok Güzel");
     }
 
     @Test
@@ -284,10 +288,10 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Saat Kulesi");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Saat Kulesi");
     }
 
     @Test
@@ -305,10 +309,10 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo("Saat Kulesi");
+        assertThat(result.get().getPlace().getName()).isEqualTo("Saat Kulesi");
     }
 
     @Test
@@ -326,7 +330,7 @@ class PlaceMatcherTest {
                 .build();
         when(placeRepository.findAll()).thenReturn(List.of(place));
 
-        Optional<Place> result = placeMatcher.match(List.of(landmark));
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(List.of(landmark));
 
         assertThat(result).isEmpty();
     }
@@ -362,8 +366,8 @@ class PlaceMatcherTest {
         assertThat(withinDistanceKm).isBetween(0.85, 0.95);
         assertThat(beyondDistanceKm).isBetween(1.05, 1.15);
 
-        Optional<Place> withinResult = placeMatcher.match(List.of(withinThreshold));
-        Optional<Place> beyondResult = placeMatcher.match(List.of(beyondThreshold));
+        Optional<PlaceMatcher.PlaceMatchResult> withinResult = placeMatcher.match(List.of(withinThreshold));
+        Optional<PlaceMatcher.PlaceMatchResult> beyondResult = placeMatcher.match(List.of(beyondThreshold));
 
         assertThat(withinResult).isPresent();
         assertThat(beyondResult).isEmpty();
