@@ -144,6 +144,13 @@
             <version>${geohash.version}</version>
         </dependency>
 
+        <!-- Image processing (WebP decode support) -->
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+            <version>3.10.1</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

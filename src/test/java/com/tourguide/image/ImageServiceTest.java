@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -50,6 +51,9 @@ class ImageServiceTest {
     @Mock
     private PlaceMatcher placeMatcher;
 
+    @Mock
+    private ImagePreprocessor imagePreprocessor;
+
     @InjectMocks
     private ImageService imageService;
 
@@ -62,7 +66,8 @@ class ImageServiceTest {
     void setUp() {
         photo = new MockMultipartFile("photo", "image.jpg", "image/jpeg", imageBytes);
         when(pilotZoneConfig.isWithinPilotZone(any(Double.class), any(Double.class))).thenReturn(true);
-        lenient().when(minioUtil.upload(anyString(), any(MultipartFile.class))).thenReturn(fileName);
+        lenient().when(imagePreprocessor.preprocess(imageBytes)).thenReturn(imageBytes);
+        lenient().when(minioUtil.upload(anyString(), any(byte[].class), anyString())).thenReturn(fileName);
         lenient().when(minioUtil.getPresignedUrl(anyString(), anyString())).thenReturn(presignedUrl);
     }
 
@@ -107,6 +112,7 @@ class ImageServiceTest {
         assertThat(response.getConfidence()).isEqualTo(0.85);
         assertThat(response.getDescription()).isEqualTo(place.getDescription());
         assertThat(response.getImageUrl()).isEqualTo(presignedUrl);
+        verify(minioUtil).upload(anyString(), eq(imageBytes), eq("image/jpeg"));
     }
 
     @Test
@@ -278,6 +284,6 @@ class ImageServiceTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasCauseInstanceOf(IOException.class);
 
-        verify(minioUtil, never()).upload(anyString(), any(MultipartFile.class));
+        verify(minioUtil, never()).upload(anyString(), any(byte[].class), anyString());
     }
 }

@@ -29,22 +29,27 @@ public class ImageService {
     private final ImageRepository imageRepository;
     private final GoogleVisionClient googleVisionClient;
     private final PlaceMatcher placeMatcher;
+    private final ImagePreprocessor imagePreprocessor;
 
     private static final String PLACE_IMAGES_BUCKET = "place-images";
+    private static final String JPEG_CONTENT_TYPE = "image/jpeg";
 
     public ImageAnalysisResponse identifyImage(MultipartFile photo, Double latitude, Double longitude, UUID userId) {
         if (!pilotZoneConfig.isWithinPilotZone(latitude, longitude)) {
             throw new OutsidePilotZoneException(latitude, longitude);
         }
 
-        final byte[] imageBytes;
+        final byte[] rawImageBytes;
         try {
-            imageBytes = photo.getBytes();
+            rawImageBytes = photo.getBytes();
         } catch (IOException e) {
             throw new RuntimeException("Failed to read image bytes", e);
         }
 
-        String fileName = minioUtil.upload(PLACE_IMAGES_BUCKET, photo);
+        final byte[] imageBytes = imagePreprocessor.preprocess(rawImageBytes);
+        log.debug("Preprocessed image from {} bytes to {} bytes", rawImageBytes.length, imageBytes.length);
+
+        String fileName = minioUtil.upload(PLACE_IMAGES_BUCKET, imageBytes, JPEG_CONTENT_TYPE);
         String imageUrl = minioUtil.getPresignedUrl(PLACE_IMAGES_BUCKET, fileName);
         log.debug("Uploaded image to MinIO: {}", imageUrl);
 
