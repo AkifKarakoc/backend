@@ -3,8 +3,8 @@ package com.tourguide.common.util;
 import com.tourguide.common.exception.FileValidationException;
 import io.minio.*;
 import io.minio.http.Method;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,10 +15,15 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class MinioUtil {
 
     private final MinioClient minioClient;
+    private final String publicUrl;
+
+    public MinioUtil(MinioClient minioClient, @Value("${minio.public-url:}") String publicUrl) {
+        this.minioClient = minioClient;
+        this.publicUrl = publicUrl;
+    }
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp"
@@ -68,12 +73,21 @@ public class MinioUtil {
     public String getPresignedUrl(String bucket, String fileName) {
         try {
             // MinIO allows maximum 7 days for presigned URLs
-            return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
+            String url = minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
                     .method(Method.GET)
                     .bucket(bucket)
                     .object(fileName)
                     .expiry(7, TimeUnit.DAYS)
                     .build());
+
+            if (publicUrl != null && !publicUrl.isBlank()) {
+                String normalizedPublicUrl = publicUrl.endsWith("/")
+                        ? publicUrl.substring(0, publicUrl.length() - 1)
+                        : publicUrl;
+                url = url.replaceFirst("https?://[^/]+", normalizedPublicUrl);
+            }
+
+            return url;
         } catch (Exception e) {
             log.error("Failed to generate presigned URL for {}/{}: {}", bucket, fileName, e.getMessage(), e);
             throw new RuntimeException("Failed to generate presigned URL", e);
