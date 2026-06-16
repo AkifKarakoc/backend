@@ -7,6 +7,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 class GoogleVisionClientTest {
 
@@ -145,9 +146,28 @@ class GoogleVisionClientTest {
     void detectLandmarks_non200Response_throwsGoogleVisionException() {
         GoogleVisionClient client = new Non200GoogleVisionClient();
 
-        assertThatThrownBy(() -> client.detectLandmarks("image".getBytes()))
-                .isInstanceOf(GoogleVisionException.class)
-                .hasMessageContaining("Google Vision API call failed with status: 500");
+        GoogleVisionException exception = catchThrowableOfType(
+                () -> client.detectLandmarks("image".getBytes()),
+                GoogleVisionException.class);
+
+        assertThat(exception).isNotNull();
+        assertThat(exception.getMessage()).contains("Google Vision API call failed with status: 500");
+        assertThat(exception.getStatusCode()).isEqualTo(500);
+    }
+
+    @Test
+    void constructor_blankApiKey_throwsIllegalArgumentException() {
+        assertThatThrownBy(() -> new GoogleVisionClient(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Google Vision API key");
+
+        assertThatThrownBy(() -> new GoogleVisionClient(""))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Google Vision API key");
+
+        assertThatThrownBy(() -> new GoogleVisionClient("   "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Google Vision API key");
     }
 
     @Test
@@ -167,7 +187,7 @@ class GoogleVisionClientTest {
 
         @Override
         String postToVisionApi(String requestBody) {
-            throw new GoogleVisionException("Google Vision API call failed with status: 500");
+            throw new GoogleVisionException("Google Vision API call failed with status: 500", 500);
         }
     }
 

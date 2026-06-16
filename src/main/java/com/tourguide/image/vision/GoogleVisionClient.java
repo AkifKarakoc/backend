@@ -1,7 +1,7 @@
 package com.tourguide.image.vision;
 
 import com.google.api.client.json.JsonObjectParser;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.Key;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,11 +36,14 @@ public class GoogleVisionClient {
     private final JsonObjectParser jsonObjectParser;
 
     public GoogleVisionClient(@Value("${google.vision.api-key}") String apiKey) {
+        if (!StringUtils.hasText(apiKey)) {
+            throw new IllegalArgumentException("Google Vision API key must not be null or blank");
+        }
         this.apiKey = apiKey;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
                 .build();
-        this.jsonObjectParser = new JsonObjectParser(JacksonFactory.getDefaultInstance());
+        this.jsonObjectParser = new JsonObjectParser(GsonFactory.getDefaultInstance());
     }
 
     public List<VisionLandmark> detectLandmarks(byte[] imageBytes) {
@@ -67,7 +70,9 @@ public class GoogleVisionClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != HTTP_OK) {
                 log.error("Google Vision API returned non-200 status: {}", response.statusCode());
-                throw new GoogleVisionException("Google Vision API call failed with status: " + response.statusCode());
+                throw new GoogleVisionException(
+                        "Google Vision API call failed with status: " + response.statusCode(),
+                        response.statusCode());
             }
             return response.body();
         } catch (InterruptedException e) {
