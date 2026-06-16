@@ -5,6 +5,7 @@ import com.tourguide.common.exception.OutsidePilotZoneException;
 import com.tourguide.common.util.MinioUtil;
 import com.tourguide.image.dto.ImageAnalysisResponse;
 import com.tourguide.image.vision.GoogleVisionClient;
+import com.tourguide.image.vision.GoogleVisionException;
 import com.tourguide.image.vision.PlaceMatcher;
 import com.tourguide.image.vision.VisionLandmark;
 import com.tourguide.place.Place;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -36,10 +38,16 @@ public class ImageService {
             throw new OutsidePilotZoneException(latitude, longitude);
         }
 
+        final byte[] imageBytes;
+        try {
+            imageBytes = photo.getBytes();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read image bytes", e);
+        }
+
         String fileName = minioUtil.upload(PLACE_IMAGES_BUCKET, photo);
 
         try {
-            byte[] imageBytes = photo.getBytes();
             List<VisionLandmark> landmarks = googleVisionClient.detectLandmarks(imageBytes);
 
             if (landmarks.isEmpty()) {
@@ -47,23 +55,29 @@ public class ImageService {
                         "Bu fotoğrafta tanıdık bir yer tespit edilemedi.", fileName);
             }
 
+            Optional<PlaceMatcher.PlaceMatchResult> matchedPlace = placeMatcher.match(landmarks);
+
+            if (matchedPlace.isPresent()) {
+                PlaceMatcher.PlaceMatchResult result = matchedPlace.get();
+                Place place = result.getPlace();
+                VisionLandmark matchedLandmark = result.getMatchedLandmark();
+                String description = place.getDescription() != null
+                        ? place.getDescription()
+                        : (place.getCategory() != null ? place.getCategory() : "Google Vision tarafından tanımlandı.");
+                return buildResponse(place.getId(), place.getName(), matchedLandmark.getConfidence(),
+                        description, fileName);
+            }
+
             VisionLandmark bestLandmark = landmarks.stream()
                     .max(Comparator.comparingDouble(VisionLandmark::getConfidence))
                     .orElseThrow();
 
-            Optional<Place> matchedPlace = placeMatcher.match(landmarks);
-
-            if (matchedPlace.isPresent()) {
-                Place place = matchedPlace.get();
-                String description = place.getDescription() != null
-                        ? place.getDescription()
-                        : (place.getCategory() != null ? place.getCategory() : "Google Vision tarafından tanımlandı.");
-                return buildResponse(place.getId(), place.getName(), bestLandmark.getConfidence(),
-                        description, fileName);
-            }
-
             return buildResponse(null, bestLandmark.getName(), bestLandmark.getConfidence(),
                     "Veritabanında eşleşen yer bulunamadı.", fileName);
+        } catch (GoogleVisionException e) {
+            log.error("Google Vision API call failed", e);
+            return buildResponse(null, "Tanımlanamadı", 0.0,
+                    "Görsel tanıma sırasında bir hata oluştu.", fileName);
         } catch (Exception e) {
             log.error("Image identification failed", e);
             return buildResponse(null, "Tanımlanamadı", 0.0,

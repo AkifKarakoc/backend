@@ -14,14 +14,21 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,7 +60,7 @@ class ImageServiceTest {
     void setUp() {
         photo = new MockMultipartFile("photo", "image.jpg", "image/jpeg", imageBytes);
         when(pilotZoneConfig.isWithinPilotZone(any(Double.class), any(Double.class))).thenReturn(true);
-        when(minioUtil.upload(anyString(), any(MockMultipartFile.class))).thenReturn(fileName);
+        lenient().when(minioUtil.upload(anyString(), any(MultipartFile.class))).thenReturn(fileName);
     }
 
     @Test
@@ -78,7 +85,11 @@ class ImageServiceTest {
                 .build();
 
         when(googleVisionClient.detectLandmarks(imageBytes)).thenReturn(List.of(landmark));
-        when(placeMatcher.match(List.of(landmark))).thenReturn(Optional.of(place));
+        when(placeMatcher.match(List.of(landmark)))
+                .thenReturn(Optional.of(PlaceMatcher.PlaceMatchResult.builder()
+                        .place(place)
+                        .matchedLandmark(landmark)
+                        .build()));
 
         // when
         ImageAnalysisResponse response = imageService.identifyImage(photo, 41.0, 29.0, UUID.randomUUID());
@@ -88,6 +99,88 @@ class ImageServiceTest {
         assertThat(response.getPlaceName()).isEqualTo(place.getName());
         assertThat(response.getConfidence()).isEqualTo(0.85);
         assertThat(response.getDescription()).isEqualTo(place.getDescription());
+        assertThat(response.getImageUrl()).isEqualTo(fileName);
+    }
+
+    @Test
+    void identifyImage_shouldUseMatchedLandmarkConfidence_whenMultipleLandmarks() {
+        // given
+        Place place = Place.builder()
+                .name("Eyfel Kulesi")
+                .nameEn("Eiffel Tower")
+                .description("A wrought-iron lattice tower")
+                .category("Landmark")
+                .latitude(48.8583)
+                .longitude(2.2944)
+                .build();
+        place.setId(UUID.randomUUID());
+
+        VisionLandmark highConfidenceUnmatched = VisionLandmark.builder()
+                .name("Unknown Tower")
+                .confidence(0.95)
+                .latitude(40.0)
+                .longitude(28.0)
+                .build();
+        VisionLandmark matchedLandmark = VisionLandmark.builder()
+                .name("Eiffel Tower")
+                .confidence(0.75)
+                .latitude(48.8584)
+                .longitude(2.2945)
+                .build();
+
+        when(googleVisionClient.detectLandmarks(imageBytes))
+                .thenReturn(List.of(highConfidenceUnmatched, matchedLandmark));
+        when(placeMatcher.match(List.of(highConfidenceUnmatched, matchedLandmark)))
+                .thenReturn(Optional.of(PlaceMatcher.PlaceMatchResult.builder()
+                        .place(place)
+                        .matchedLandmark(matchedLandmark)
+                        .build()));
+
+        // when
+        ImageAnalysisResponse response = imageService.identifyImage(photo, 41.0, 29.0, UUID.randomUUID());
+
+        // then
+        assertThat(response.getPlaceId()).isEqualTo(place.getId());
+        assertThat(response.getPlaceName()).isEqualTo(place.getName());
+        assertThat(response.getConfidence()).isEqualTo(0.75);
+        assertThat(response.getDescription()).isEqualTo(place.getDescription());
+        assertThat(response.getImageUrl()).isEqualTo(fileName);
+    }
+
+    @Test
+    void identifyImage_shouldUseFallbackDescription_whenPlaceDescriptionAndCategoryAreNull() {
+        // given
+        Place place = Place.builder()
+                .name("Eyfel Kulesi")
+                .description(null)
+                .category(null)
+                .latitude(48.8583)
+                .longitude(2.2944)
+                .build();
+        place.setId(UUID.randomUUID());
+
+        VisionLandmark landmark = VisionLandmark.builder()
+                .name("Eiffel Tower")
+                .confidence(0.85)
+                .latitude(48.8584)
+                .longitude(2.2945)
+                .build();
+
+        when(googleVisionClient.detectLandmarks(imageBytes)).thenReturn(List.of(landmark));
+        when(placeMatcher.match(List.of(landmark)))
+                .thenReturn(Optional.of(PlaceMatcher.PlaceMatchResult.builder()
+                        .place(place)
+                        .matchedLandmark(landmark)
+                        .build()));
+
+        // when
+        ImageAnalysisResponse response = imageService.identifyImage(photo, 41.0, 29.0, UUID.randomUUID());
+
+        // then
+        assertThat(response.getPlaceId()).isEqualTo(place.getId());
+        assertThat(response.getPlaceName()).isEqualTo(place.getName());
+        assertThat(response.getConfidence()).isEqualTo(0.85);
+        assertThat(response.getDescription()).isEqualTo("Google Vision tarafından tanımlandı.");
         assertThat(response.getImageUrl()).isEqualTo(fileName);
     }
 
@@ -145,5 +238,19 @@ class ImageServiceTest {
         assertThat(response.getConfidence()).isEqualTo(0.0);
         assertThat(response.getDescription()).isEqualTo("Görsel tanıma sırasında bir hata oluştu.");
         assertThat(response.getImageUrl()).isEqualTo(fileName);
+    }
+
+    @Test
+    void identifyImage_shouldPropagateExceptionAndNotUpload_whenReadingPhotoBytesFails() throws IOException {
+        // given
+        MultipartFile brokenPhoto = mock(MultipartFile.class);
+        when(brokenPhoto.getBytes()).thenThrow(new IOException("read failed"));
+
+        // when & then
+        assertThatThrownBy(() -> imageService.identifyImage(brokenPhoto, 41.0, 29.0, UUID.randomUUID()))
+                .isInstanceOf(RuntimeException.class)
+                .hasCauseInstanceOf(IOException.class);
+
+        verify(minioUtil, never()).upload(anyString(), any(MultipartFile.class));
     }
 }
