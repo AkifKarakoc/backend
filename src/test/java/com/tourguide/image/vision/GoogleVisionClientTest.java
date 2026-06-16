@@ -82,11 +82,103 @@ class GoogleVisionClientTest {
     }
 
     @Test
+    void parseLandmarks_nullInput_returnsEmptyList() {
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+
+        List<VisionLandmark> landmarks = client.parseLandmarks(null);
+
+        assertThat(landmarks).isEmpty();
+    }
+
+    @Test
+    void parseLandmarks_blankInput_returnsEmptyList() {
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+
+        assertThat(client.parseLandmarks("")).isEmpty();
+        assertThat(client.parseLandmarks("   ")).isEmpty();
+    }
+
+    @Test
+    void parseLandmarks_nullDescription_usesUnknownLandmark() {
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+        String response = """
+                {
+                  "responses": [{
+                    "landmarkAnnotations": [{
+                      "score": 0.85,
+                      "locations": [{
+                        "latLng": {
+                          "latitude": 38.4189,
+                          "longitude": 27.1287
+                        }
+                      }]
+                    }]
+                  }]
+                }
+                """;
+
+        List<VisionLandmark> landmarks = client.parseLandmarks(response);
+
+        assertThat(landmarks).hasSize(1);
+        assertThat(landmarks.get(0).getName()).isEqualTo("Unknown Landmark");
+    }
+
+    @Test
     void detectLandmarks_nullImageBytes_throwsIllegalArgumentException() {
         GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
 
         assertThatThrownBy(() -> client.detectLandmarks(null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("imageBytes");
+    }
+
+    @Test
+    void detectLandmarks_emptyImageBytes_throwsIllegalArgumentException() {
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+
+        assertThatThrownBy(() -> client.detectLandmarks(new byte[0]))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("imageBytes");
+    }
+
+    @Test
+    void detectLandmarks_non200Response_throwsGoogleVisionException() {
+        GoogleVisionClient client = new Non200GoogleVisionClient();
+
+        assertThatThrownBy(() -> client.detectLandmarks("image".getBytes()))
+                .isInstanceOf(GoogleVisionException.class)
+                .hasMessageContaining("Google Vision API call failed with status: 500");
+    }
+
+    @Test
+    void detectLandmarks_validResponse_returnsParsedLandmarks() {
+        GoogleVisionClient client = new ValidResponseGoogleVisionClient();
+
+        List<VisionLandmark> landmarks = client.detectLandmarks("image".getBytes());
+
+        assertThat(landmarks).hasSize(1);
+        assertThat(landmarks.get(0).getName()).isEqualTo("Saat Kulesi");
+    }
+
+    static class Non200GoogleVisionClient extends GoogleVisionClient {
+        Non200GoogleVisionClient() {
+            super("dummy-api-key");
+        }
+
+        @Override
+        String postToVisionApi(String requestBody) {
+            throw new GoogleVisionException("Google Vision API call failed with status: 500");
+        }
+    }
+
+    static class ValidResponseGoogleVisionClient extends GoogleVisionClient {
+        ValidResponseGoogleVisionClient() {
+            super("dummy-api-key");
+        }
+
+        @Override
+        String postToVisionApi(String requestBody) {
+            return SAMPLE_RESPONSE;
+        }
     }
 }

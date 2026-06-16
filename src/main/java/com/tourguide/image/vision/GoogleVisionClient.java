@@ -6,6 +6,7 @@ import com.google.api.client.util.Key;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -24,8 +25,11 @@ import java.util.List;
 public class GoogleVisionClient {
 
     private static final String VISION_API_URL = "https://vision.googleapis.com/v1/images:annotate";
+    private static final String LANDMARK_DETECTION_FEATURE = "LANDMARK_DETECTION";
     private static final int MAX_RESULTS = 10;
+    private static final int HTTP_OK = 200;
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
+    private static final String UNKNOWN_LANDMARK = "Unknown Landmark";
 
     private final String apiKey;
     private final HttpClient httpClient;
@@ -49,7 +53,7 @@ public class GoogleVisionClient {
         return parseLandmarks(responseBody);
     }
 
-    private String postToVisionApi(String requestBody) {
+    String postToVisionApi(String requestBody) {
         // Google Vision REST API requires the API key in the query string.
         // Key restrictions (IP, referrer, etc.) should be configured in Google Cloud Console.
         HttpRequest request = HttpRequest.newBuilder()
@@ -61,7 +65,7 @@ public class GoogleVisionClient {
 
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
+            if (response.statusCode() != HTTP_OK) {
                 log.error("Google Vision API returned non-200 status: {}", response.statusCode());
                 throw new GoogleVisionException("Google Vision API call failed with status: " + response.statusCode());
             }
@@ -84,15 +88,19 @@ public class GoogleVisionClient {
                       "content": "%s"
                     },
                     "features": [{
-                      "type": "LANDMARK_DETECTION",
+                      "type": "%s",
                       "maxResults": %d
                     }]
                   }]
                 }
-                """.formatted(base64Image, MAX_RESULTS);
+                """.formatted(base64Image, LANDMARK_DETECTION_FEATURE, MAX_RESULTS);
     }
 
     public List<VisionLandmark> parseLandmarks(String jsonResponse) {
+        if (!StringUtils.hasText(jsonResponse)) {
+            return Collections.emptyList();
+        }
+
         try {
             VisionApiResponse response = jsonObjectParser.parseAndClose(
                     new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8)),
@@ -130,7 +138,7 @@ public class GoogleVisionClient {
         }
 
         return VisionLandmark.builder()
-                .name(annotation.description)
+                .name(annotation.description != null ? annotation.description : UNKNOWN_LANDMARK)
                 .confidence(annotation.score != null ? annotation.score : 0.0)
                 .latitude(latitude)
                 .longitude(longitude)
