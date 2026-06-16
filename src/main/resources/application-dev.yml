@@ -28,6 +28,14 @@ minio:
     badge-icons: badge-icons
     quest-verifications: quest-verifications
 
+# Google Vision API Configuration
+google:
+  vision:
+    api-key: ${GOOGLE_VISION_API_KEY}
+    confidence-threshold: ${GOOGLE_VISION_CONFIDENCE_THRESHOLD:0.5}
+    max-distance-km: ${GOOGLE_VISION_MAX_DISTANCE_KM:1.0}
+    fallback-max-distance-km: ${GOOGLE_VISION_FALLBACK_MAX_DISTANCE_KM:2.0}
+
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET}
@@ -47,12 +55,13 @@ gemini:
   temperature: ${GEMINI_TEMPERATURE:0.4}
 
 # Pilot Zone Configuration (Izmir bounds)
+# Pilot Zone Configuration (Izmir + Efes bounds)
 pilot-zone:
-  enabled: true
-  min-latitude: 38.20
+  enabled: false
+  min-latitude: 37.90
   max-latitude: 38.60
   min-longitude: 26.80
-  max-longitude: 27.30
+  max-longitude: 27.40
   center-latitude: 38.4192
   center-longitude: 27.1287
 
