@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class GoogleVisionClientTest {
 
@@ -49,5 +50,43 @@ class GoogleVisionClientTest {
 
         assertThat(requestBody).contains(Base64.getEncoder().encodeToString(imageBytes));
         assertThat(requestBody).contains("LANDMARK_DETECTION");
+    }
+
+    @Test
+    void parseLandmarks_emptyLandmarkAnnotations_returnsEmptyList() {
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+        String response = "{\"responses\":[{\"landmarkAnnotations\":[]}]}";
+
+        List<VisionLandmark> landmarks = client.parseLandmarks(response);
+
+        assertThat(landmarks).isEmpty();
+    }
+
+    @Test
+    void parseLandmarks_emptyResponses_returnsEmptyList() {
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+        String response = "{\"responses\":[]}";
+
+        List<VisionLandmark> landmarks = client.parseLandmarks(response);
+
+        assertThat(landmarks).isEmpty();
+    }
+
+    @Test
+    void parseLandmarks_malformedJson_throwsGoogleVisionException() {
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+
+        assertThatThrownBy(() -> client.parseLandmarks("not valid json"))
+                .isInstanceOf(GoogleVisionException.class)
+                .hasMessageContaining("Failed to parse Google Vision API response");
+    }
+
+    @Test
+    void detectLandmarks_nullImageBytes_throwsIllegalArgumentException() {
+        GoogleVisionClient client = new GoogleVisionClient("dummy-api-key");
+
+        assertThatThrownBy(() -> client.detectLandmarks(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("imageBytes");
     }
 }

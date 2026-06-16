@@ -23,39 +23,59 @@ import java.util.List;
 @Component
 public class GoogleVisionClient {
 
+    private static final String VISION_API_URL = "https://vision.googleapis.com/v1/images:annotate";
+    private static final int MAX_RESULTS = 10;
+    private static final Duration TIMEOUT = Duration.ofSeconds(10);
+
     private final String apiKey;
     private final HttpClient httpClient;
     private final JsonObjectParser jsonObjectParser;
 
     public GoogleVisionClient(@Value("${google.vision.api-key}") String apiKey) {
         this.apiKey = apiKey;
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(TIMEOUT)
+                .build();
         this.jsonObjectParser = new JsonObjectParser(JacksonFactory.getDefaultInstance());
     }
 
     public List<VisionLandmark> detectLandmarks(byte[] imageBytes) {
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new IllegalArgumentException("imageBytes must not be null or empty");
+        }
+
         String requestBody = buildRequestBody(imageBytes);
+        String responseBody = postToVisionApi(requestBody);
+        return parseLandmarks(responseBody);
+    }
+
+    private String postToVisionApi(String requestBody) {
+        // Google Vision REST API requires the API key in the query string.
+        // Key restrictions (IP, referrer, etc.) should be configured in Google Cloud Console.
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://vision.googleapis.com/v1/images:annotate?key=" + apiKey))
+                .uri(URI.create(VISION_API_URL + "?key=" + apiKey))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .timeout(Duration.ofSeconds(10))
+                .timeout(TIMEOUT)
                 .build();
 
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 log.error("Google Vision API returned non-200 status: {}", response.statusCode());
-                throw new RuntimeException("Google Vision API call failed with status: " + response.statusCode());
+                throw new GoogleVisionException("Google Vision API call failed with status: " + response.statusCode());
             }
-            return parseLandmarks(response.body());
-        } catch (IOException | InterruptedException e) {
+            return response.body();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new GoogleVisionException("Failed to call Google Vision API", e);
+        } catch (IOException e) {
             log.error("Failed to call Google Vision API", e);
-            throw new RuntimeException("Failed to call Google Vision API", e);
+            throw new GoogleVisionException("Failed to call Google Vision API", e);
         }
     }
 
-    public String buildRequestBody(byte[] imageBytes) {
+    String buildRequestBody(byte[] imageBytes) {
         String base64Image = Base64.getEncoder().encodeToString(imageBytes);
         return """
                 {
@@ -65,11 +85,11 @@ public class GoogleVisionClient {
                     },
                     "features": [{
                       "type": "LANDMARK_DETECTION",
-                      "maxResults": 10
+                      "maxResults": %d
                     }]
                   }]
                 }
-                """.formatted(base64Image);
+                """.formatted(base64Image, MAX_RESULTS);
     }
 
     public List<VisionLandmark> parseLandmarks(String jsonResponse) {
@@ -93,7 +113,7 @@ public class GoogleVisionClient {
                     .toList();
         } catch (IOException e) {
             log.error("Failed to parse Google Vision API response", e);
-            return Collections.emptyList();
+            throw new GoogleVisionException("Failed to parse Google Vision API response", e);
         }
     }
 
