@@ -3,6 +3,7 @@ package com.tourguide.image.vision;
 import com.tourguide.common.util.CoordinateUtil;
 import com.tourguide.place.Place;
 import com.tourguide.place.PlaceRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.text.Normalizer;
@@ -12,19 +13,51 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+/**
+ * Matches Google Vision landmark annotations to {@link Place} entities from the database.
+ *
+ * <p>Matching strategy:
+ * <ol>
+ *   <li>Filter out landmarks whose confidence is below the configured threshold.</li>
+ *   <li>Process remaining landmarks by confidence descending.</li>
+ *   <li>For each landmark, find candidate places whose normalized name (including
+ *       {@code nameTr} and {@code nameEn}) contains the normalized landmark name or vice versa.</li>
+ *   <li>If no name candidates are found, consider all places as candidates.</li>
+ *   <li>Pick the closest candidate using the haversine distance to the landmark coordinates.</li>
+ *   <li>Return the first match that is within the configured maximum distance.</li>
+ * </ol>
+ */
 @Component
 public class PlaceMatcher {
 
-    private static final double CONFIDENCE_THRESHOLD = 0.5;
-    private static final double MAX_DISTANCE_KM = 1.0;
     private static final Pattern NON_ALPHANUMERIC_EXCEPT_SPACE = Pattern.compile("[^a-z0-9 ]");
+    private static final Pattern MULTIPLE_SPACES = Pattern.compile("\\s+");
 
     private final PlaceRepository placeRepository;
+
+    @Value("${google.vision.confidence-threshold:0.5}")
+    private double confidenceThreshold = 0.5;
+
+    @Value("${google.vision.max-distance-km:1.0}")
+    private double maxDistanceKm = 1.0;
 
     public PlaceMatcher(PlaceRepository placeRepository) {
         this.placeRepository = placeRepository;
     }
 
+    /**
+     * Matches the given landmarks to a place in the database.
+     *
+     * <p>Landmarks are filtered by confidence (default threshold 0.5)
+     * and processed from highest to lowest confidence. For each landmark, candidate places are
+     * selected by normalized name match (lowercase, Turkish diacritics removed, special characters
+     * stripped). If no name match is found, all places are considered. The closest candidate by
+     * haversine distance is returned only if it is within the configured maximum distance
+     * (default 1.0 km).
+     *
+     * @param landmarks list of landmarks detected by Google Vision
+     * @return the best matching place, or {@link Optional#empty()} if no match is found
+     */
     public Optional<Place> match(List<VisionLandmark> landmarks) {
         if (landmarks == null || landmarks.isEmpty()) {
             return Optional.empty();
@@ -36,7 +69,7 @@ public class PlaceMatcher {
         }
 
         return landmarks.stream()
-                .filter(landmark -> landmark.getConfidence() >= CONFIDENCE_THRESHOLD)
+                .filter(landmark -> landmark.getConfidence() >= confidenceThreshold)
                 .sorted(Comparator.comparingDouble(VisionLandmark::getConfidence).reversed())
                 .map(landmark -> matchLandmark(landmark, allPlaces))
                 .flatMap(Optional::stream)
@@ -67,7 +100,7 @@ public class PlaceMatcher {
             }
         }
 
-        if (minDistance <= MAX_DISTANCE_KM) {
+        if (minDistance <= maxDistanceKm) {
             return Optional.ofNullable(closest);
         }
         return Optional.empty();
@@ -97,6 +130,7 @@ public class PlaceMatcher {
         normalized = Normalizer.normalize(normalized, Normalizer.Form.NFD);
         normalized = normalized.replace('ı', 'i');
         normalized = NON_ALPHANUMERIC_EXCEPT_SPACE.matcher(normalized).replaceAll("");
+        normalized = MULTIPLE_SPACES.matcher(normalized).replaceAll(" ");
         normalized = normalized.trim();
         return normalized;
     }
