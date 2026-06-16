@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +48,7 @@ class PlaceMatcherTest {
         assertThat(result).isPresent();
         assertThat(result.get().getPlace().getName()).isEqualTo("Ayasofya Müzesi");
         assertThat(result.get().getMatchedLandmark().getName()).isEqualTo("Ayasofya");
+        assertThat(result.get().getSource()).isEqualTo(PlaceMatcher.MatchSource.LANDMARK);
     }
 
     @Test
@@ -371,5 +373,85 @@ class PlaceMatcherTest {
 
         assertThat(withinResult).isPresent();
         assertThat(beyondResult).isEmpty();
+    }
+
+    @Test
+    void shouldMatchPlaceByWebEntityDescription() {
+        Place ephesus = Place.builder()
+                .name("Efes Antik Kenti")
+                .nameTr("Efes Antik Kenti")
+                .nameEn("Ephesus")
+                .latitude(37.9495)
+                .longitude(27.3640)
+                .build();
+        when(placeRepository.findAll()).thenReturn(List.of(ephesus));
+
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(
+                Collections.emptyList(), List.of("Ephesus", "Library of Celsus"), Collections.emptyList());
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getPlace().getName()).isEqualTo("Efes Antik Kenti");
+        assertThat(result.get().getSource()).isEqualTo(PlaceMatcher.MatchSource.WEB_ENTITY);
+    }
+
+    @Test
+    void shouldMatchPlaceByLabelDescriptionAgainstKeywords() {
+        Place ephesus = Place.builder()
+                .name("Efes Antik Kenti")
+                .nameTr("Efes Antik Kenti")
+                .nameEn("Ephesus")
+                .keywords(List.of("ancient roman ruins"))
+                .latitude(37.9495)
+                .longitude(27.3640)
+                .build();
+        when(placeRepository.findAll()).thenReturn(List.of(ephesus));
+
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(
+                Collections.emptyList(), Collections.emptyList(), List.of("ancient roman ruins", "amphitheatre"));
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getPlace().getName()).isEqualTo("Efes Antik Kenti");
+        assertThat(result.get().getSource()).isEqualTo(PlaceMatcher.MatchSource.LABEL);
+    }
+
+    @Test
+    void shouldMatchPlaceByKeywordInLandmarkMatching() {
+        Place ephesus = Place.builder()
+                .name("Efes Antik Kenti")
+                .keywords(List.of("Library of Celsus"))
+                .latitude(37.9495)
+                .longitude(27.3640)
+                .build();
+        when(placeRepository.findAll()).thenReturn(List.of(ephesus));
+
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(
+                Collections.emptyList(), List.of("Library of Celsus"), Collections.emptyList());
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getPlace().getName()).isEqualTo("Efes Antik Kenti");
+    }
+
+    @Test
+    void shouldPreferLandmarkMatchOverWebEntity() {
+        Place ephesus = Place.builder()
+                .name("Efes Antik Kenti")
+                .nameEn("Ephesus")
+                .latitude(37.9495)
+                .longitude(27.3640)
+                .build();
+        when(placeRepository.findAll()).thenReturn(List.of(ephesus));
+
+        VisionLandmark landmark = VisionLandmark.builder()
+                .name("Efes Antik Kenti")
+                .confidence(0.95)
+                .latitude(37.9495)
+                .longitude(27.3640)
+                .build();
+
+        Optional<PlaceMatcher.PlaceMatchResult> result = placeMatcher.match(
+                List.of(landmark), List.of("Ephesus"), Collections.emptyList());
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getSource()).isEqualTo(PlaceMatcher.MatchSource.LANDMARK);
     }
 }

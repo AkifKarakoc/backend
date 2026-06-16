@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,34 +46,48 @@ public class ImageService {
 
         String fileName = minioUtil.upload(PLACE_IMAGES_BUCKET, photo);
         String imageUrl = minioUtil.getPresignedUrl(PLACE_IMAGES_BUCKET, fileName);
+        log.debug("Uploaded image to MinIO: {}", imageUrl);
 
         try {
-            List<VisionLandmark> landmarks = googleVisionClient.detectLandmarks(imageBytes);
+            log.debug("Calling Google Vision for image: {} bytes", imageBytes.length);
+            GoogleVisionClient.VisionDetectionResult detectionResult = googleVisionClient.detectAll(imageBytes);
 
-            if (landmarks.isEmpty()) {
-                return buildResponse(null, "Tanımlanamadı", 0.0,
-                        "Bu fotoğrafta tanıdık bir yer tespit edilemedi.", imageUrl);
-            }
+            List<VisionLandmark> landmarks = detectionResult.landmarks();
+            List<String> webEntities = detectionResult.webEntities();
+            List<String> labels = detectionResult.labels();
 
-            Optional<PlaceMatcher.PlaceMatchResult> matchedPlace = placeMatcher.match(landmarks);
+            log.debug("Google Vision returned {} landmark(s), {} web entity/entities, {} label(s)",
+                    landmarks.size(), webEntities.size(), labels.size());
+            landmarks.forEach(landmark -> log.debug("Detected landmark: name='{}' confidence={} lat={} lon={}",
+                    landmark.getName(), landmark.getConfidence(), landmark.getLatitude(), landmark.getLongitude()));
+            webEntities.forEach(entity -> log.debug("Detected web entity: '{}'", entity));
+            labels.forEach(label -> log.debug("Detected label: '{}'", label));
+
+            Optional<PlaceMatcher.PlaceMatchResult> matchedPlace =
+                    placeMatcher.match(landmarks, webEntities, labels);
+            log.debug("PlaceMatcher result: {}", matchedPlace);
 
             if (matchedPlace.isPresent()) {
                 PlaceMatcher.PlaceMatchResult result = matchedPlace.get();
                 Place place = result.getPlace();
-                VisionLandmark matchedLandmark = result.getMatchedLandmark();
+                double confidence = resolveConfidence(result);
                 String description = place.getDescription() != null
                         ? place.getDescription()
                         : (place.getCategory() != null ? place.getCategory() : "Google Vision tarafından tanımlandı.");
-                return buildResponse(place.getId(), place.getName(), matchedLandmark.getConfidence(),
-                        description, imageUrl);
+                return buildResponse(place.getId(), place.getName(), confidence, description, imageUrl);
             }
 
-            VisionLandmark bestLandmark = landmarks.stream()
-                    .max(Comparator.comparingDouble(VisionLandmark::getConfidence))
-                    .orElseThrow();
+            if (!landmarks.isEmpty()) {
+                VisionLandmark bestLandmark = landmarks.stream()
+                        .max(java.util.Comparator.comparingDouble(VisionLandmark::getConfidence))
+                        .orElseThrow();
+                return buildResponse(null, bestLandmark.getName(), bestLandmark.getConfidence(),
+                        "Veritabanında eşleşen yer bulunamadı.", imageUrl);
+            }
 
-            return buildResponse(null, bestLandmark.getName(), bestLandmark.getConfidence(),
-                    "Veritabanında eşleşen yer bulunamadı.", imageUrl);
+            log.info("No landmarks, web entities, or labels matched for image {}", imageUrl);
+            return buildResponse(null, "Tanımlanamadı", 0.0,
+                    "Bu fotoğrafta tanıdık bir yer tespit edilemedi.", imageUrl);
         } catch (GoogleVisionException e) {
             log.error("Google Vision API call failed", e);
             return buildResponse(null, "Tanımlanamadı", 0.0,
@@ -84,6 +97,12 @@ public class ImageService {
             return buildResponse(null, "Tanımlanamadı", 0.0,
                     "Görsel tanıma sırasında bir hata oluştu.", imageUrl);
         }
+    }
+
+    private double resolveConfidence(PlaceMatcher.PlaceMatchResult result) {
+        return result.getSource() == PlaceMatcher.MatchSource.LANDMARK && result.getMatchedLandmark() != null
+                ? result.getMatchedLandmark().getConfidence()
+                : 0.0;
     }
 
     private ImageAnalysisResponse buildResponse(UUID placeId, String placeName, Double confidence,

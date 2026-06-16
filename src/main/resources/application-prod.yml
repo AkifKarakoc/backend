@@ -50,13 +50,13 @@ ai-service:
   base-url: ${AI_SERVICE_URL:http://159.65.127.73:8000}
   timeout: 30000
 
-# Pilot Zone Configuration (Izmir bounds)
+# Pilot Zone Configuration (Izmir + Efes bounds)
 pilot-zone:
-  enabled: true
-  min-latitude: 38.20
+  enabled: false
+  min-latitude: 37.90
   max-latitude: 38.60
   min-longitude: 26.80
-  max-longitude: 27.30
+  max-longitude: 27.40
   center-latitude: 38.4192
   center-longitude: 27.1287
 

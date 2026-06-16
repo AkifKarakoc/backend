@@ -17,6 +17,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -86,11 +87,15 @@ class ImageServiceTest {
                 .longitude(2.2945)
                 .build();
 
-        when(googleVisionClient.detectLandmarks(imageBytes)).thenReturn(List.of(landmark));
-        when(placeMatcher.match(List.of(landmark)))
+        GoogleVisionClient.VisionDetectionResult detectionResult =
+                new GoogleVisionClient.VisionDetectionResult(List.of(landmark), Collections.emptyList(), Collections.emptyList());
+
+        when(googleVisionClient.detectAll(imageBytes)).thenReturn(detectionResult);
+        when(placeMatcher.match(List.of(landmark), Collections.emptyList(), Collections.emptyList()))
                 .thenReturn(Optional.of(PlaceMatcher.PlaceMatchResult.builder()
                         .place(place)
                         .matchedLandmark(landmark)
+                        .source(PlaceMatcher.MatchSource.LANDMARK)
                         .build()));
 
         // when
@@ -130,12 +135,18 @@ class ImageServiceTest {
                 .longitude(2.2945)
                 .build();
 
-        when(googleVisionClient.detectLandmarks(imageBytes))
-                .thenReturn(List.of(highConfidenceUnmatched, matchedLandmark));
-        when(placeMatcher.match(List.of(highConfidenceUnmatched, matchedLandmark)))
+        GoogleVisionClient.VisionDetectionResult detectionResult =
+                new GoogleVisionClient.VisionDetectionResult(
+                        List.of(highConfidenceUnmatched, matchedLandmark),
+                        Collections.emptyList(),
+                        Collections.emptyList());
+
+        when(googleVisionClient.detectAll(imageBytes)).thenReturn(detectionResult);
+        when(placeMatcher.match(List.of(highConfidenceUnmatched, matchedLandmark), Collections.emptyList(), Collections.emptyList()))
                 .thenReturn(Optional.of(PlaceMatcher.PlaceMatchResult.builder()
                         .place(place)
                         .matchedLandmark(matchedLandmark)
+                        .source(PlaceMatcher.MatchSource.LANDMARK)
                         .build()));
 
         // when
@@ -168,11 +179,15 @@ class ImageServiceTest {
                 .longitude(2.2945)
                 .build();
 
-        when(googleVisionClient.detectLandmarks(imageBytes)).thenReturn(List.of(landmark));
-        when(placeMatcher.match(List.of(landmark)))
+        GoogleVisionClient.VisionDetectionResult detectionResult =
+                new GoogleVisionClient.VisionDetectionResult(List.of(landmark), Collections.emptyList(), Collections.emptyList());
+
+        when(googleVisionClient.detectAll(imageBytes)).thenReturn(detectionResult);
+        when(placeMatcher.match(List.of(landmark), Collections.emptyList(), Collections.emptyList()))
                 .thenReturn(Optional.of(PlaceMatcher.PlaceMatchResult.builder()
                         .place(place)
                         .matchedLandmark(landmark)
+                        .source(PlaceMatcher.MatchSource.LANDMARK)
                         .build()));
 
         // when
@@ -189,7 +204,13 @@ class ImageServiceTest {
     @Test
     void identifyImage_shouldReturnNoLandmarksResponse_whenNoLandmarksDetected() {
         // given
-        when(googleVisionClient.detectLandmarks(imageBytes)).thenReturn(List.of());
+        GoogleVisionClient.VisionDetectionResult detectionResult =
+                new GoogleVisionClient.VisionDetectionResult(
+                        Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+
+        when(googleVisionClient.detectAll(imageBytes)).thenReturn(detectionResult);
+        when(placeMatcher.match(Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
+                .thenReturn(Optional.empty());
 
         // when
         ImageAnalysisResponse response = imageService.identifyImage(photo, 41.0, 29.0, UUID.randomUUID());
@@ -212,8 +233,12 @@ class ImageServiceTest {
                 .longitude(28.0)
                 .build();
 
-        when(googleVisionClient.detectLandmarks(imageBytes)).thenReturn(List.of(landmark));
-        when(placeMatcher.match(List.of(landmark))).thenReturn(Optional.empty());
+        GoogleVisionClient.VisionDetectionResult detectionResult =
+                new GoogleVisionClient.VisionDetectionResult(List.of(landmark), Collections.emptyList(), Collections.emptyList());
+
+        when(googleVisionClient.detectAll(imageBytes)).thenReturn(detectionResult);
+        when(placeMatcher.match(List.of(landmark), Collections.emptyList(), Collections.emptyList()))
+                .thenReturn(Optional.empty());
 
         // when
         ImageAnalysisResponse response = imageService.identifyImage(photo, 41.0, 29.0, UUID.randomUUID());
@@ -229,7 +254,7 @@ class ImageServiceTest {
     @Test
     void identifyImage_shouldReturnFallbackResponse_whenVisionCallThrowsException() {
         // given
-        when(googleVisionClient.detectLandmarks(imageBytes)).thenThrow(new RuntimeException("Vision API error"));
+        when(googleVisionClient.detectAll(imageBytes)).thenThrow(new RuntimeException("Vision API error"));
 
         // when
         ImageAnalysisResponse response = imageService.identifyImage(photo, 41.0, 29.0, UUID.randomUUID());
